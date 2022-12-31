@@ -3,6 +3,8 @@ Software is provided as is and it is open sourced so contributions are welcome!
 
 Feel free to create a ticket in case something is not working. 
 
+# Release
+Go to [Release page](https://github.com/kirek007/ws-osd-py/releases)
 
 # Tool for generating OSD for Walksnail DVR
 
