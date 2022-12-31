@@ -155,7 +155,9 @@ class DnDPanel(wx.Panel):
         else:
             self.lbl_output_info.SetLabel("") 
 
-        if video and font:
+        if appState._font_path and appState._video_path:
+            font = OsdFont(appState._font_path)
+            video = VideoFile(appState._video_path)
             if video.is_hd() != font.is_hd():
                 self.lbl_font_info.SetLabel("Font doesn't match video resolution, please select '%s' font " % video_size_text ) 
 
@@ -177,5 +179,5 @@ if __name__ == "__main__":
     
 
     frame = DnDFrame()
-    frame.Size = (700, 400)
+    frame.Size = (600, 500)
     app.MainLoop()
