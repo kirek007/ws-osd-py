@@ -1,3 +1,9 @@
+# Ack
+Software is provided as is and it is open sourced so contributions are welcome! 
+
+Feel free to create a ticket in case something is not working. 
+
+
 # Tool for generating OSD for Walksnail DVR
 
 That's easy, drag and drop files into UI, click Generate.
