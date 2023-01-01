@@ -1,7 +1,11 @@
 import argparse
+import cProfile
+import io
 import os
 from datetime import datetime
 from pathlib import Path
+from pstats import SortKey
+import pstats
 from struct import unpack
 from threading import Thread
 
@@ -220,7 +224,8 @@ class OsdGenerator:
 
     def main(self): 
         cps = CountsPerSec().start()
-
+        pr = cProfile.Profile()
+        pr.enable()
 
         
         osd_time = -1
@@ -258,7 +263,12 @@ class OsdGenerator:
             if current_frame % 200 == 0:
                 
                 print("Current: %s/%s (fps: %d)" % (current_frame, total_frames, fps))
-
-
+        
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
         print("Done.")
 
