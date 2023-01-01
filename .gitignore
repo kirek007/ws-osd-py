@@ -1,3 +1,5 @@
 dist
 build
 *.pyc
+Makefile.venv
+.venv
