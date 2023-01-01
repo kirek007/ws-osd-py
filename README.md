@@ -13,3 +13,10 @@ Then import generated sequence into and video editing software and adjust framer
 
 # Fonts
 You can get fancy fonts from [Sneaky_FPV](https://sites.google.com/view/sneaky-fpv/home?pli=1), or get [default walksnails fonts](https://drive.google.com/file/d/1c3CRgXYQaM3Tt4ukLSIvoogScQZs9w49/view)
+
+# Examples
+Here are some results:
+
+https://www.youtube.com/watch?v=fHHXh9k-SGg
+
+https://www.youtube.com/watch?v=2u7wiJBIdCg
