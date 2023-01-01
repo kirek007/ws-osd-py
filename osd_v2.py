@@ -231,19 +231,26 @@ class OsdGenerator:
         osd_time = -1
         osd_frame = []
         current_frame = 1
+        video_fps = self.video.get_fps()
+        total_frames = self.video.get_total_frames()
+
         while True:
             if self.stopped:
                 print("Process canceled.")
                 break
 
-            video_frame = self.video.read_frame()
-            video_time = self.video.get_current_time()
-            current_frame+=1
+            # video_frame = self.video.read_frame()
+            # video_time = self.video.get_current_time()
+            
 
-            if not video_frame:
+            frames_per_ms = 1 / video_fps * 1000
+            calc_video_time = int((current_frame - 1) * frames_per_ms)
+
+            if current_frame >= total_frames:
                 break
 
-            if osd_time < video_time:
+            if osd_time < calc_video_time:
+                # print("%s vs %s" % (video_time, calc_video_time))
                 raw_osd_frame = self.osd.read_frame()
                 if not raw_osd_frame:
                     break
@@ -254,9 +261,8 @@ class OsdGenerator:
             # cv2.imshow('frame', result)
             # if cv2.waitKey(1) == ord('q'):
             #     break
-
+            current_frame+=1
             cps.increment()
-            total_frames = self.video.get_total_frames()
             fps = int(cps.countsPerSec())
             self.osdGenStatus.update(current_frame, total_frames, fps)
 
