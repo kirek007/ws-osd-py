@@ -1,10 +1,10 @@
 import os
 import pathlib
 import wx
-from osd_v2 import OSDFile, OsdFont, VideoFile
+from processor import OSDFile, OsdFont, OsdPreview, VideoFile
 
 from settings import appState
-
+import cv2
 ########################################################################
 class MyFileDropTarget(wx.FileDropTarget):
     """"""
@@ -39,6 +39,7 @@ class DnDPanel(wx.Panel):
     def __init__(self, parent):
         """Constructor"""
         wx.Panel.__init__(self, parent=parent)
+
         self.font_default = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.font_bold = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.font_warning = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
@@ -59,6 +60,21 @@ class DnDPanel(wx.Panel):
         self.btnStart = wx.Button(self, label="Generate OSD")
         self.btnStart.Disable()
 
+        p = wx.Panel(self)
+        s = wx.BoxSizer(wx.VERTICAL)
+        self.btnRender = wx.Button(p, label="Render video")
+        self.osdOffsetX = wx.Slider(p,name="OSD offset X", minValue=-200, maxValue=600, value=0, size=wx.Size(200,20))
+        self.osdOffsetY = wx.Slider(p,name="OSD offset Y", minValue=-200, maxValue=600, value=0, size=wx.Size(200,20))
+        self.osdZoom = wx.Slider(p,name="OSD zoom", minValue=80, maxValue=200, value=100, size=wx.Size(200,20))
+        s.Add(self.osdOffsetX, 0, wx.ALL, 5)
+        s.Add(self.osdOffsetY, 0, wx.ALL, 5)
+        s.Add(self.osdZoom, 0, wx.ALL, 5)
+        s.Add(self.btnRender, 0, wx.ALL, 5)
+        p.SetSizer(s)
+
+
+
+
         lbl_info.SetFont(self.font_default)
 
         self.lbl_osd_sel.SetFont(self.font_bold)
@@ -73,26 +89,69 @@ class DnDPanel(wx.Panel):
         self.lbl_output_info.SetForegroundColour((255,0,0))
 
         self.btnStart.Bind(wx.EVT_BUTTON,self.btnStartProcessOnClick) 
+        self.btnRender.Bind(wx.EVT_BUTTON,self.btnRenderOnClick) 
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(lbl_info, 0, wx.ALL, 5)
-        sizer.Add(lbl_video, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_video_sel, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_video_info, 0, wx.ALL, 5)
-        sizer.Add(lbl_osd, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_osd_sel, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_osd_info, 0, wx.ALL, 5)
-        sizer.Add(lbl_font, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_font_sel, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_font_info, 0, wx.ALL, 5)
-        sizer.Add(lbl_output, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_output_sel, 0, wx.ALL, 5)
-        sizer.Add(self.lbl_output_info, 0, wx.ALL, 5)
-        sizer.Add(self.btnStart, 0, wx.ALL, 5)
+
+        p2 = wx.Panel(self)
+        s2 = wx.BoxSizer(wx.VERTICAL)
+        p2.SetSizer(s2)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(p, 0, wx.ALL, 5)
+        sizer.Add(p2, 0, wx.ALL, 5)
         self.SetSizer(sizer)
+        
+        s2.Add(lbl_info, 0, wx.ALL, 5)
+        s2.Add(lbl_video, 0, wx.ALL, 5)
+        s2.Add(self.lbl_video_sel, 0, wx.ALL, 5)
+        s2.Add(self.lbl_video_info, 0, wx.ALL, 5)
+        s2.Add(lbl_osd, 0, wx.ALL, 5)
+        s2.Add(self.lbl_osd_sel, 0, wx.ALL, 5)
+        s2.Add(self.lbl_osd_info, 0, wx.ALL, 5)
+        s2.Add(lbl_font, 0, wx.ALL, 5)
+        s2.Add(self.lbl_font_sel, 0, wx.ALL, 5)
+        s2.Add(self.lbl_font_info, 0, wx.ALL, 5)
+        s2.Add(lbl_output, 0, wx.ALL, 5)
+        s2.Add(self.lbl_output_sel, 0, wx.ALL, 5)
+        s2.Add(self.lbl_output_info, 0, wx.ALL, 5)
+        s2.Add(self.btnStart, 0, wx.ALL, 5)
+
+        # sizer.Add(self.osdOffsetX, 0, wx.ALL, 5)
+        # sizer.Add(self.osdOffsetY, 0, wx.ALL, 5)
+        # sizer.Add(self.osdZoom, 0, wx.ALL, 5)
+        # sizer.Add(self.btnRender, 0, wx.ALL, 5)
+        
+        
+
 
         file_drop_target = MyFileDropTarget(self)
         self.SetDropTarget(file_drop_target)
+
+    def btnRenderOnClick(self, event):
+
+        prev = OsdPreview(appState.get_osd_config())
+        prev.generate_preview((self.osdOffsetX.GetValue(),self.osdOffsetY.GetValue()), self.osdZoom.GetValue())
+        # appState.osd_render_video()
+        # status = appState.osd_init()
+        # pd = wx.ProgressDialog("Rendering Video", "Processing...", 1, self, style=wx.PD_CAN_ABORT | wx.PD_APP_MODAL | wx.PD_REMAINING_TIME | wx.PD_ELAPSED_TIME | wx.PD_SMOOTH)
+        # pd.Show()
+        # appState.osd_render_video()
+        # keepGoing = True
+        # while keepGoing and not appState.get_osd().render_done:
+        #     wx.MilliSleep(200)
+        #     keepGoing, skip = pd.Update(0)
+        #     if appState.get_osd().render_done:
+        #         pd.Update(1)
+        #         keepGoing = False
+
+
+        # if status.is_complete():
+        #     mes = wx.MessageBox("OK")
+        # else:
+        #     mes = wx.MessageBox("Process canceled.", "CANCELED")
+            
+        # pd.Destroy()
+        # self.updateSettings()
 
 
     def btnStartProcessOnClick(self, event): 
@@ -161,7 +220,6 @@ class DnDPanel(wx.Panel):
             if video.is_hd() != font.is_hd():
                 self.lbl_font_info.SetLabel("Font doesn't match video resolution, please select '%s' font " % video_size_text ) 
 
-
 ########################################################################
 class DnDFrame(wx.Frame):
     """"""
@@ -179,5 +237,5 @@ if __name__ == "__main__":
     
 
     frame = DnDFrame()
-    frame.Size = (600, 500)
+    frame.Size = (800, 900)
     app.MainLoop()

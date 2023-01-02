@@ -11,6 +11,9 @@ from threading import Thread
 
 import cv2
 import numpy as np
+import ffmpeg
+
+
 
 class CountsPerSec:
     """
@@ -61,16 +64,28 @@ class OsdFont:
 
 
 class OSDFile:
+
+    READ_SIZE = 2124
+
     def __init__(self, path, font: OsdFont):
         self.osdFile = open(path, "rb")
         self.fcType = self.osdFile.read(4).decode("utf-8")
         self.magic = self.osdFile.read(36)
         self.font = font
 
+    def peek_frame(self, frame_no):
+        frame_start = frame_no * self.READ_SIZE
+        current_pos = self.osdFile.tell()
+        self.osdFile.seek(frame_start)
+        frame = self.read_frame()
+        self.osdFile.seek(current_pos)
+
+        return frame
+
     def read_frame(self):
-        READ_SIZE = 2124
-        rawData = self.osdFile.read(READ_SIZE)
-        if len(rawData) < READ_SIZE:
+        
+        rawData = self.osdFile.read(self.READ_SIZE)
+        if len(rawData) < self.READ_SIZE:
             return False
 
         return Frame(rawData, self.font)
@@ -182,6 +197,73 @@ class OsdGenStatus:
     def is_complete(self) -> bool:
         return self.current_frame >= self.total_frames
 
+def overlay_image_alpha(img, img_overlay, x, y):
+    """Overlay `img_overlay` onto `img` at (x, y) and blend using `alpha_mask`.
+
+    `alpha_mask` must have same HxW as `img_overlay` and values in range [0, 1].
+    """
+
+    # Mask
+    alpha_mask = img_overlay[:, :, 3] / 255.0
+    img_result = img[:, :, :3].copy()
+    img_overlay = img_overlay[:, :, :3]
+
+    # Image ranges
+    y1, y2 = max(0, y), min(img.shape[0], y + img_overlay.shape[0])
+    x1, x2 = max(0, x), min(img.shape[1], x + img_overlay.shape[1])
+
+    # Overlay ranges
+    y1o, y2o = max(0, -y), min(img_overlay.shape[0], img.shape[0] - y)
+    x1o, x2o = max(0, -x), min(img_overlay.shape[1], img.shape[1] - x)
+
+    # Exit if nothing to do
+    if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+        return
+
+    # Blend overlay within the determined ranges
+    img_crop = img[y1:y2, x1:x2]
+    img_overlay_crop = img_overlay[y1o:y2o, x1o:x2o]
+    alpha = alpha_mask[y1o:y2o, x1o:x2o, np.newaxis]
+    alpha_inv = 1.0 - alpha
+
+    img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
+
+class OsdPreview:
+
+    def __init__(self, config: OsdGenConfig):
+        self.stopped = False
+        
+        
+        self.font = OsdFont(config.font_path)
+        self.osd = OSDFile(config.osd_path, self.font)
+        self.video = VideoFile(config.video_path)
+        self.output = config.output_path
+        self.config = config
+
+
+
+    def generate_preview(self, osd_pos, osd_zomm):
+
+        video_frame = self.video.read_frame().data
+
+        osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
+        osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
+
+        scale_percent = osd_zomm # percent of original size
+        width = int(osd_frame.shape[1] * scale_percent / 100)
+        height = int(osd_frame.shape[0] * scale_percent / 100)
+        dim = (width, height)
+        
+        # resize image
+        osd_frame_res = cv2.resize(osd_frame, dim, interpolation = cv2.INTER_CUBIC)
+
+        overlay_image_alpha(video_frame, osd_frame_res, osd_pos[0], osd_pos[1])
+        result = cv2.resize(video_frame, (1280, 720), interpolation = cv2.INTER_CUBIC)
+
+        cv2.imshow("Preview", result)
+        cv2.waitKey(1)
+
+
 class OsdGenerator:
 
     def __init__(self, config: OsdGenConfig):
@@ -192,6 +274,7 @@ class OsdGenerator:
         self.osd = OSDFile(config.osd_path, self.font)
         self.video = VideoFile(config.video_path)
         self.output = config.output_path
+        self.config = config
         os.mkdir(self.output)
 
         self.osdGenStatus = OsdGenStatus()
@@ -203,7 +286,6 @@ class OsdGenerator:
 
     def stop(self):
         self.stopped = True
-
 
     @staticmethod
     def __render_osd_frame(osd_frame_glyphs):
@@ -221,6 +303,29 @@ class OsdGenerator:
 
         return video_frame
 
+    def render(self):
+        osd_frame = ffmpeg.input(
+            "%s\%s" % (self.output, "ws_%09d.png"), framerate=60
+        )
+        video = ffmpeg.input(self.config.video_path)
+
+        video_size = self.video.get_size()
+        ff_size = {"w": video_size[1], "h": video_size[0]}
+
+        self.render_done = False
+        (
+            video.filter("scale", **ff_size, force_original_aspect_ratio=0)
+            .filter("pad", **ff_size, x=-1, y=-1, color="black")
+            .overlay(osd_frame, x=0, y=0)
+            .output("%s_osd.mp4" % (self.output), video_bitrate="25M")
+            .overwrite_output() 
+            .run(overwrite_output=True,pipe_stderr=True)
+        )
+        self.render_done = True
+
+    def render_example(self):
+        frame = []
+        return frame
 
     def main(self): 
         cps = CountsPerSec().start()
@@ -258,9 +363,8 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
 
             cv2.imwrite("%s/ws_%09d.png" % (self.output, current_frame), osd_frame)
-            # cv2.imshow('frame', result)
-            # if cv2.waitKey(1) == ord('q'):
-            #     break
+
+
             current_frame+=1
             cps.increment()
             fps = int(cps.countsPerSec())
