@@ -259,14 +259,26 @@ class OsdSettingsPanel(wx.Panel):
         self.osdZoom.Bind(wx.EVT_SCROLL, self.eventSliderUpdated)
         vsizer.Add(self.osdZoom)
         hsizer.Add(vsizer)
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        btnReset = wx.Button(self, label='Reset')
+        btnReset.Bind(wx.EVT_BUTTON, self.btnResetClick)
+
+
         bsizer.Add(hsizer, 0, wx.LEFT)
+        bsizer.Add(btnReset, 0, wx.CENTER)
         main_sizer = wx.BoxSizer()
         main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
         bsizer.AddSpacer(10)
         self.SetSizer(main_sizer)
 
-        pass
-    
+    def btnResetClick(self, event):
+        self.osdOffsetLeft.SetValue(0)
+        self.osdOffsetTop.SetValue(0)
+        self.osdZoom.SetValue(100)
+        appState.updateOsdPosition(self.osdOffsetLeft.Value, self.osdOffsetTop.Value, self.osdZoom.Value)
+
+        pub.sendMessage(PubSubEvents.PreviewUpdate)
+
     def eventSliderUpdated(self, event):
         logging.debug(f"Slider updated.")
         appState.updateOsdPosition(self.osdOffsetLeft.Value, self.osdOffsetTop.Value, self.osdZoom.Value)
