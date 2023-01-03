@@ -301,23 +301,61 @@ class BottomPanel(wx.Panel):
         bsizer.AddSpacer(20)
         self.SetSizer(main_sizer)
 
+class PrewievPanel(wx.Panel):
+
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent=parent)
+        
+        box = wx.StaticBox(self, -1, "")
+        bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        bsizer.AddSpacer(20)
+        img = wx.EmptyImage(640, 360)
+        self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY, 
+                                         wx.BitmapFromImage(img))
+        bsizer.Add(self.imageCtrl)                                 
+        main_sizer = wx.BoxSizer()
+        main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
+        bsizer.AddSpacer(20)
+        self.SetSizer(main_sizer)
+        pub.subscribe(self.eventConfigUpdate, PubSubEvents.PreviewUpdate)
+   
+    def eventConfigUpdate(self):
+        if not appState.is_configured():
+            return
+        logging.debug(f"Preview update requested.")
+        self.onView()
+
+
+    def onView(self):
+
+        prev = OsdPreview(appState.get_osd_config())
+        image = prev.generate_preview((appState.offsetLeft, appState.offsetTop ),appState.osdZoom)
+        self.imageCtrl.SetBitmap(wx.Bitmap.FromBuffer(640, 360, image))
+        self.imageCtrl.Refresh()
+        self.Refresh()
 
 class MainWindow(wx.Frame):
 
     def __init__(self):
         wx.Frame.__init__(self, parent=None,
                           title="Walksnail OSD overlay tool")
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        vsizer = wx.BoxSizer(wx.VERTICAL)
         fileInput = FileInputPanel(self)
         osdSettings = OsdSettingsPanel(self)
         buttonsPanel = ButtonsPanel(self)
         bottomPanel = BottomPanel(self)
-        sizer.Add(fileInput, 0, wx.EXPAND | wx.ALL, 0)
-        sizer.Add(osdSettings, 0, wx.EXPAND | wx.ALL, 0)
-        sizer.Add(buttonsPanel, 0, wx.EXPAND | wx.ALL, 0)
-        sizer.Add(bottomPanel, 0, wx.EXPAND | wx.ALL, 0)
-
-        self.SetSizer(sizer)
+        prewievPanel = PrewievPanel(self)
+        vsizer.Add(fileInput, 0, wx.EXPAND | wx.ALL, 0)
+        vsizer.Add(osdSettings, 0, wx.EXPAND | wx.ALL, 0)
+        vsizer.Add(buttonsPanel, 0, wx.EXPAND | wx.ALL, 0)
+        vsizer.Add(bottomPanel, 0, wx.EXPAND | wx.ALL, 0)
+        main_sizer.Add(vsizer)
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        vsizer.Add(prewievPanel, 0, wx.EXPAND, 0)
+        main_sizer.Add(vsizer)
+        self.SetSizer(main_sizer)
         self.Show()
 
         pub.subscribe(self.eventConfigUpdate, PubSubEvents.ConfigUpdate)
@@ -335,5 +373,6 @@ if __name__ == "__main__":
     app = wx.App(False)
 
     frame = MainWindow()
-    frame.Size = (700, 900)
+    frame.Size = (1200, 785)
+    frame.MinSize = wx.Size(1200, 785) 
     app.MainLoop()

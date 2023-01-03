@@ -286,10 +286,12 @@ class OsdPreview:
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
 
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
-        result = cv2.resize(video_frame, (1280, 720), interpolation = cv2.INTER_CUBIC)
+        result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_CUBIC)
 
-        cv2.imshow("Preview", result)
-        cv2.waitKey(1)
+        # cv2.imshow("Preview", result)
+        # cv2.waitKey(1)
+
+        return result
 
 
 class OsdGenerator:
