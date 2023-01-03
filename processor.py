@@ -344,9 +344,11 @@ class OsdGenerator:
         else:
             ff_size = {"w": video_size[1], "h": video_size[0]}
 
+
+        out_path = os.path.join(self.output, "ws_%09d.png")
         osd_frame = (
             ffmpeg
-            .input("%s\%s" % (self.output, "ws_%09d.png"), framerate=60)
+            .input(out_path, framerate=60)
             .filter("scale", **ff_size, force_original_aspect_ratio=0)
         )
 
@@ -411,7 +413,8 @@ class OsdGenerator:
                 Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 osd_time = raw_osd_frame.startTime
 
-            cv2.imwrite("%s/ws_%09d.png" % (self.output, current_frame), frame)
+            out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
+            cv2.imwrite(out_path, frame)
 
 
             current_frame+=1
