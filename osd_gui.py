@@ -298,7 +298,7 @@ class BottomPanel(wx.Panel):
 
         vsizer = wx.BoxSizer(wx.VERTICAL)
         hyper2 = hl.HyperLinkCtrl(self, -1, "Latest version always here!",
-                    URL="https://github.com/kirek007/ws-osd-pyk")
+                    URL="https://github.com/kirek007/ws-osd-py")
         vsizer.Add(hyper2)
         hsizer.Add(vsizer)
         hsizer.AddSpacer(20)
@@ -374,6 +374,6 @@ if __name__ == "__main__":
     app = wx.App(False)
 
     frame = MainWindow()
-    frame.Size = (1300, 785)
-    frame.MinSize = wx.Size(1300, 785) 
+    frame.Size = (1300, 790)
+    frame.MinSize = wx.Size(1300, 790) 
     app.MainLoop()
