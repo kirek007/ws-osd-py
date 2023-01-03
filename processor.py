@@ -288,8 +288,7 @@ class OsdPreview:
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_CUBIC)
 
-        # cv2.imshow("Preview", result)
-        # cv2.waitKey(1)
+        result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
         return result
 
