@@ -362,6 +362,6 @@ if __name__ == "__main__":
     app = wx.App(False)
 
     frame = MainWindow()
-    frame.Size = (1250, 785)
-    frame.MinSize = wx.Size(1250, 785) 
+    frame.Size = (1300, 785)
+    frame.MinSize = wx.Size(1300, 785) 
     app.MainLoop()
