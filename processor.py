@@ -117,9 +117,10 @@ class Frame:
     def __convert_to_glyphs(self):
         glyphs_arr = []
         for x in range(0, len(self.rawData), 2):
-            gindex = int(self.rawData[x:x + 1].hex(), base=16)
-            glyph = self.font.get_glyph(gindex)
+            index, page = unpack("<BB", self.rawData[x:x + 2])
+            glyph = self.font.get_glyph(index + page * 255 )
             glyphs_arr.append(glyph)
+
         return glyphs_arr
 
     def get_osd_frame_glyphs(self):
