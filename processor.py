@@ -279,6 +279,9 @@ class OsdPreview:
 
         video_frame = self.video.read_frame().data
 
+        for skipme in range(100):
+            self.osd.read_frame()
+
         osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
 
@@ -404,7 +407,6 @@ class OsdGenerator:
                 break
 
             if osd_time < calc_video_time:
-                # print("%s vs %s" % (video_time, calc_video_time))
                 raw_osd_frame = self.osd.read_frame()
                 if not raw_osd_frame:
                     break
