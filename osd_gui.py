@@ -2,6 +2,7 @@ from enum import Enum
 import logging
 import wx
 from processor import OSDFile, OsdFont, OsdPreview, VideoFile
+import wx.lib.agw.hyperlink as hl
 
 from settings import appState
 from pubsub import pub
@@ -272,19 +273,50 @@ class OsdSettingsPanel(wx.Panel):
 
         pub.sendMessage(PubSubEvents.PreviewUpdate)
 
+class BottomPanel(wx.Panel):
+
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent=parent)
+
+        box = wx.StaticBox(self, -1, "")
+        bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        bsizer.AddSpacer(20)
+        hsizer = wx.BoxSizer()
+        hsizer.AddSpacer(20)
+
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        hyper2 = hl.HyperLinkCtrl(self, -1, "Latest version always here!",
+                    URL="https://github.com/kirek007/ws-osd-pyk")
+        vsizer.Add(hyper2)
+        hsizer.Add(vsizer)
+        hsizer.AddSpacer(20)
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        hyper2 = hl.HyperLinkCtrl(self, -1, "Psst, this is coffee driven application ;)",
+                            URL="https://www.buymeacoffee.com/kirek")
+        vsizer.Add(hyper2)
+        hsizer.Add(vsizer)
+        bsizer.Add(hsizer, 0, wx.LEFT)
+        main_sizer = wx.BoxSizer()
+        main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
+        bsizer.AddSpacer(20)
+        self.SetSizer(main_sizer)
+
 
 class MainWindow(wx.Frame):
 
     def __init__(self):
         wx.Frame.__init__(self, parent=None,
-                          title="Walksnail OSD overlay generator by Kirek")
+                          title="Walksnail OSD overlay tool")
         sizer = wx.BoxSizer(wx.VERTICAL)
         fileInput = FileInputPanel(self)
         osdSettings = OsdSettingsPanel(self)
         buttonsPanel = ButtonsPanel(self)
+        bottomPanel = BottomPanel(self)
         sizer.Add(fileInput, 0, wx.EXPAND | wx.ALL, 0)
         sizer.Add(osdSettings, 0, wx.EXPAND | wx.ALL, 0)
         sizer.Add(buttonsPanel, 0, wx.EXPAND | wx.ALL, 0)
+        sizer.Add(bottomPanel, 0, wx.EXPAND | wx.ALL, 0)
+
         self.SetSizer(sizer)
         self.Show()
 
