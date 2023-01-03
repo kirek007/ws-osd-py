@@ -17,6 +17,8 @@ class AppState:
         self.offsetTop = 0
         self.osdZoom = 100
 
+        self.render_upscale = False
+
     def updateOsdPosition(self, left, top, zoom):
         self.offsetLeft = left
         self.offsetTop = top
@@ -68,24 +70,25 @@ class AppState:
             self._video_path,
             self._osd_path,
             self._font_path,
-            self._output_path
+            self._output_path,
+            self.offsetLeft,
+            self.offsetTop,
+            self.osdZoom,
+            self.render_upscale
         )
 
     def osd_init(self) -> OsdGenStatus:
-        self._osd_gen = OsdGenerator(
-            OsdGenConfig(
-                self._video_path,
-                self._osd_path,
-                self._font_path,
-                self._output_path
-            ))
+        self._osd_gen = OsdGenerator(self.get_osd_config())
         return self.osd_gen_status()
 
     def osd_start_process(self):
         self._osd_gen.start()
 
     def osd_render_video(self):
-        self._osd_gen.render()
+        self._osd_gen.start_video(False)
+
+    def osd_reset(self):
+        self._osd_gen = None
 
     def get_osd(self):
         return self._osd_gen

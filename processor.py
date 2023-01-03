@@ -1,19 +1,20 @@
 import argparse
 import cProfile
 import io
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
 from pstats import SortKey
 import pstats
 from struct import unpack
+from subprocess import TimeoutExpired
 from threading import Thread
+import time
 
 import cv2
 import numpy as np
 import ffmpeg
-
-
 
 class CountsPerSec:
     """
@@ -177,11 +178,15 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, output_path) -> None: 
+    def __init__(self, video_path, osd_path, font_path, output_path, offset_left, offset_top, osd_zoom, render_upscale) -> None: 
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
         self.output_path = output_path
+        self.offset_left = offset_left
+        self.offset_top = offset_top
+        self.osd_zoom = osd_zoom
+        self.render_upscale = render_upscale
 
 class OsdGenStatus:
     def __init__(self) -> None:
@@ -197,36 +202,64 @@ class OsdGenStatus:
     def is_complete(self) -> bool:
         return self.current_frame >= self.total_frames
 
-def overlay_image_alpha(img, img_overlay, x, y):
-    """Overlay `img_overlay` onto `img` at (x, y) and blend using `alpha_mask`.
+class Utils:
+    
+    @staticmethod
+    def merge_images(img, overlay, x, y, zoom):
+        scale_percent = zoom # percent of original size
+        width = int(overlay.shape[1] * scale_percent / 100)
+        height = int(overlay.shape[0] * scale_percent / 100)
+        dim = (width, height)
+        img_overlay_res = cv2.resize(overlay, dim, interpolation = cv2.INTER_CUBIC)
+        # img_crop = img_overlay_res[y:img.shape[0],x:img.shape[1]]
 
-    `alpha_mask` must have same HxW as `img_overlay` and values in range [0, 1].
-    """
+        # Image ranges
+        y1, y2 = max(0, y), min(img.shape[0], y + img_overlay_res.shape[0])
+        x1, x2 = max(0, x), min(img.shape[1], x + img_overlay_res.shape[1])
 
-    # Mask
-    alpha_mask = img_overlay[:, :, 3] / 255.0
-    img_result = img[:, :, :3].copy()
-    img_overlay = img_overlay[:, :, :3]
+        # Overlay ranges
+        y1o, y2o = max(0, -y), min(img_overlay_res.shape[0], img.shape[0] - y)
+        x1o, x2o = max(0, -x), min(img_overlay_res.shape[1], img.shape[1] - x)
 
-    # Image ranges
-    y1, y2 = max(0, y), min(img.shape[0], y + img_overlay.shape[0])
-    x1, x2 = max(0, x), min(img.shape[1], x + img_overlay.shape[1])
+        img_crop = img[y1:y2, x1:x2]
+        img_overlay_crop = img_overlay_res[y1o:y2o, x1o:x2o]
 
-    # Overlay ranges
-    y1o, y2o = max(0, -y), min(img_overlay.shape[0], img.shape[0] - y)
-    x1o, x2o = max(0, -x), min(img_overlay.shape[1], img.shape[1] - x)
+        img_crop[:] = img_overlay_crop + img_crop
+        img = img_crop
+        # img[y:y+img_crop.shape[0], x:x+img_crop.shape[1]] = img_crop
+        
 
-    # Exit if nothing to do
-    if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
-        return
+    @staticmethod
+    def overlay_image_alpha(img, img_overlay, x, y, zoom):
+        scale_percent = zoom # percent of original size
+        width = int(img_overlay.shape[1] * scale_percent / 100)
+        height = int(img_overlay.shape[0] * scale_percent / 100)
+        dim = (width, height)
+        img_overlay_res = cv2.resize(img_overlay, dim, interpolation = cv2.INTER_CUBIC)
 
-    # Blend overlay within the determined ranges
-    img_crop = img[y1:y2, x1:x2]
-    img_overlay_crop = img_overlay[y1o:y2o, x1o:x2o]
-    alpha = alpha_mask[y1o:y2o, x1o:x2o, np.newaxis]
-    alpha_inv = 1.0 - alpha
+        # Mask
+        alpha_mask = img_overlay_res[:, :, 3] / 255.0
+        img_overlay_res = img_overlay_res[:, :, :3]
 
-    img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
+        # Image ranges
+        y1, y2 = max(0, y), min(img.shape[0], y + img_overlay_res.shape[0])
+        x1, x2 = max(0, x), min(img.shape[1], x + img_overlay_res.shape[1])
+
+        # Overlay ranges
+        y1o, y2o = max(0, -y), min(img_overlay_res.shape[0], img.shape[0] - y)
+        x1o, x2o = max(0, -x), min(img_overlay_res.shape[1], img.shape[1] - x)
+
+        # Exit if nothing to do
+        if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+            return
+
+        # Blend overlay within the determined ranges
+        img_crop = img[y1:y2, x1:x2]
+        img_overlay_crop = img_overlay_res[y1o:y2o, x1o:x2o]
+        alpha = alpha_mask[y1o:y2o, x1o:x2o, np.newaxis]
+        alpha_inv = 1.0 - alpha
+
+        img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
 
 class OsdPreview:
 
@@ -249,15 +282,7 @@ class OsdPreview:
         osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
 
-        scale_percent = osd_zomm # percent of original size
-        width = int(osd_frame.shape[1] * scale_percent / 100)
-        height = int(osd_frame.shape[0] * scale_percent / 100)
-        dim = (width, height)
-        
-        # resize image
-        osd_frame_res = cv2.resize(osd_frame, dim, interpolation = cv2.INTER_CUBIC)
-
-        overlay_image_alpha(video_frame, osd_frame_res, osd_pos[0], osd_pos[1])
+        Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (1280, 720), interpolation = cv2.INTER_CUBIC)
 
         cv2.imshow("Preview", result)
@@ -268,17 +293,24 @@ class OsdGenerator:
 
     def __init__(self, config: OsdGenConfig):
         self.stopped = False
-        
-        
+
         self.font = OsdFont(config.font_path)
         self.osd = OSDFile(config.osd_path, self.font)
         self.video = VideoFile(config.video_path)
         self.output = config.output_path
         self.config = config
-        os.mkdir(self.output)
-
         self.osdGenStatus = OsdGenStatus()
         self.osdGenStatus.update(0, self.video.get_total_frames(), 0)
+        try:
+            os.mkdir(self.output)
+        except:
+            pass
+
+
+
+    def start_video(self, upscale: bool):
+        Thread(target=self.render, args=()).start()
+        return self
 
     def start(self):
         Thread(target=self.main, args=()).start()
@@ -304,23 +336,36 @@ class OsdGenerator:
         return video_frame
 
     def render(self):
-        osd_frame = ffmpeg.input(
-            "%s\%s" % (self.output, "ws_%09d.png"), framerate=60
-        )
-        video = ffmpeg.input(self.config.video_path)
+        self.osdGenStatus.update(0, 1, 0)
 
         video_size = self.video.get_size()
-        ff_size = {"w": video_size[1], "h": video_size[0]}
+        if self.config.render_upscale:
+            ff_size = {"w": 2560, "h": 1440}
+        else:
+            ff_size = {"w": video_size[1], "h": video_size[0]}
+
+        osd_frame = (
+            ffmpeg
+            .input("%s\%s" % (self.output, "ws_%09d.png"), framerate=60)
+            .filter("scale", **ff_size, force_original_aspect_ratio=0)
+        )
+
+        video = (
+            ffmpeg
+            .input(self.config.video_path)
+            .filter("scale", **ff_size, force_original_aspect_ratio=1)
+        )
 
         self.render_done = False
-        (
-            video.filter("scale", **ff_size, force_original_aspect_ratio=0)
+        process = (
+            video
             .filter("pad", **ff_size, x=-1, y=-1, color="black")
             .overlay(osd_frame, x=0, y=0)
-            .output("%s_osd.mp4" % (self.output), video_bitrate="25M")
+            .output("%s_osd.mp4" % (self.output), video_bitrate="40M")
             .overwrite_output() 
-            .run(overwrite_output=True,pipe_stderr=True)
+            .run()
         )
+
         self.render_done = True
 
     def render_example(self):
@@ -338,15 +383,17 @@ class OsdGenerator:
         current_frame = 1
         video_fps = self.video.get_fps()
         total_frames = self.video.get_total_frames()
-
+        video_size = self.video.get_size()
+        img_height, img_width = video_size[0], video_size[1]
+        n_channels = 4
+        transparent_img = np.zeros((img_height, img_width, n_channels), dtype=np.uint8) 
+        frame = transparent_img.copy()
         while True:
             if self.stopped:
                 print("Process canceled.")
                 break
 
-            # video_frame = self.video.read_frame()
-            # video_time = self.video.get_current_time()
-            
+         
 
             frames_per_ms = 1 / video_fps * 1000
             calc_video_time = int((current_frame - 1) * frames_per_ms)
@@ -359,10 +406,12 @@ class OsdGenerator:
                 raw_osd_frame = self.osd.read_frame()
                 if not raw_osd_frame:
                     break
+                frame = transparent_img.copy()
                 osd_frame = self.__render_osd_frame(raw_osd_frame.get_osd_frame_glyphs())
+                Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 osd_time = raw_osd_frame.startTime
 
-            cv2.imwrite("%s/ws_%09d.png" % (self.output, current_frame), osd_frame)
+            cv2.imwrite("%s/ws_%09d.png" % (self.output, current_frame), frame)
 
 
             current_frame+=1

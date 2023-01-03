@@ -4,3 +4,4 @@ build
 Makefile.venv
 .venv
 .vscode/launch.json
+ffmpeg.exe
