@@ -3,3 +3,5 @@ build
 *.pyc
 Makefile.venv
 .venv
+.vscode/launch.json
+ffmpeg.exe

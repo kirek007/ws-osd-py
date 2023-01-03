@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['main.py'],
+    ['osd_gui.py'],
     pathex=[],
     binaries=[],
     datas=[],

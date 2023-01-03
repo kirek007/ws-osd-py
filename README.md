@@ -20,3 +20,7 @@ Here are some results:
 https://www.youtube.com/watch?v=fHHXh9k-SGg
 
 https://www.youtube.com/watch?v=2u7wiJBIdCg
+
+# Run from source code
+
+Install Python 3.10 and run `make run` it should work.
