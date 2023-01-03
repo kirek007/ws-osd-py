@@ -4,7 +4,16 @@ Software is provided as is and it is open sourced so contributions are welcome!
 Feel free to create a ticket in case something is not working. 
 
 # Release
+
 Go to [Release page](https://github.com/kirek007/ws-osd-py/releases)
+
+# Requirements
+
+If you want to render osd into file directly in app you need ffmpeg to be installed in you system.
+
+For Windows: Nothing to do, incuded in release.
+For Linux: `sudo apt install ffmpeg `
+For MacOs `brew install ffmpeg`
 
 # Tool for generating OSD for Walksnail DVR
 
@@ -20,7 +29,3 @@ Here are some results:
 https://www.youtube.com/watch?v=fHHXh9k-SGg
 
 https://www.youtube.com/watch?v=2u7wiJBIdCg
-
-# Run from source code
-
-Install Python 3.10 and run `make run` it should work.
