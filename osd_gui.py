@@ -306,17 +306,16 @@ class PrewievPanel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent)
         
-        box = wx.StaticBox(self, -1, "")
+        box = wx.StaticBox(self, -1, "OSD Preview")
         bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
-        bsizer.AddSpacer(20)
-        img = wx.EmptyImage(640, 360)
         self.imageCtrl = wx.StaticBitmap(self, wx.ID_ANY, 
-                                         wx.BitmapFromImage(img))
-        bsizer.Add(self.imageCtrl)                                 
+                                         wx.Bitmap(wx.Image(640, 360, True)))
+        bsizer.Add(self.imageCtrl, 20, wx.EXPAND | wx.ALL, 20)  
         main_sizer = wx.BoxSizer()
-        main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
-        bsizer.AddSpacer(20)
+        main_sizer.Add(bsizer, 0, wx.EXPAND | wx.ALL, 20)
         self.SetSizer(main_sizer)
+
+        pub.subscribe(self.eventConfigUpdate, PubSubEvents.ConfigUpdate)
         pub.subscribe(self.eventConfigUpdate, PubSubEvents.PreviewUpdate)
    
     def eventConfigUpdate(self):
@@ -327,7 +326,6 @@ class PrewievPanel(wx.Panel):
 
 
     def onView(self):
-
         prev = OsdPreview(appState.get_osd_config())
         image = prev.generate_preview((appState.offsetLeft, appState.offsetTop ),appState.osdZoom)
         self.imageCtrl.SetBitmap(wx.Bitmap.FromBuffer(640, 360, image))
@@ -358,21 +356,12 @@ class MainWindow(wx.Frame):
         self.SetSizer(main_sizer)
         self.Show()
 
-        pub.subscribe(self.eventConfigUpdate, PubSubEvents.ConfigUpdate)
-        pub.subscribe(self.eventConfigUpdate, PubSubEvents.PreviewUpdate)
-
-    def eventConfigUpdate(self):
-        if not appState.is_configured():
-            return
-        logging.debug(f"Preview update requested.")
-        prev = OsdPreview(appState.get_osd_config())
-        prev.generate_preview((appState.offsetLeft, appState.offsetTop ),appState.osdZoom)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     app = wx.App(False)
 
     frame = MainWindow()
-    frame.Size = (1200, 785)
-    frame.MinSize = wx.Size(1200, 785) 
+    frame.Size = (1250, 785)
+    frame.MinSize = wx.Size(1250, 785) 
     app.MainLoop()
