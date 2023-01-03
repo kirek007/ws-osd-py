@@ -15,6 +15,9 @@ import time
 import cv2
 import numpy as np
 import ffmpeg
+import srt
+from srt import Subtitle
+from PIL import ImageFont, ImageDraw, Image  
 
 class CountsPerSec:
     """
@@ -179,10 +182,11 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, output_path, offset_left, offset_top, osd_zoom, render_upscale) -> None: 
+    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale) -> None: 
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
+        self.srt_path = srt_path
         self.output_path = output_path
         self.offset_left = offset_left
         self.offset_top = offset_top
@@ -271,6 +275,7 @@ class OsdPreview:
         self.font = OsdFont(config.font_path)
         self.osd = OSDFile(config.osd_path, self.font)
         self.video = VideoFile(config.video_path)
+        self.srt = SrtFile(config.srt_path)
         self.output = config.output_path
         self.config = config
 
@@ -282,18 +287,46 @@ class OsdPreview:
 
         for skipme in range(100):
             self.osd.read_frame()
+            srt_data = self.srt.next_data()
 
         osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
 
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_CUBIC)
-
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
-        return result
+        srt_line = srt_data["line"]
+        # cv2.putText(result, srt_line, (20,20), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0),2)
+        pil_im = Image.fromarray(result)  
+        draw = ImageDraw.Draw(pil_im, 'RGBA')  
+        font = ImageFont.truetype("lucon.ttf", 12)  
+
+        left, top, right, bottom = draw.textbbox((20,340), srt_line, font=font)
+        draw.rectangle((left-5, top-5, right+5, bottom+5), fill=(0, 0, 0, 125))
+        draw.text((20,340), srt_line, font=font, fill=(255, 0, 0, 125))
 
 
+        return np.array(pil_im)
+
+class SrtFile():
+    def __init__(self, path):
+        self.index = 0
+        with open(path, "r") as f:
+            self.subs = list(srt.parse(f, True))
+            
+    
+    def next_data(self) -> dict:
+        sub = self.subs[self.index]
+        # d = dict(x.split(":") for x in sub.split(" "))
+        d= dict()
+        d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
+        d["line"] =  sub.content #sub.start.seconds / 1000 * sub.start.microseconds
+        self.index += 1
+        return d
+
+
+        
 class OsdGenerator:
 
     def __init__(self, config: OsdGenConfig):
@@ -305,6 +338,7 @@ class OsdGenerator:
         self.output = config.output_path
         self.config = config
         self.osdGenStatus = OsdGenStatus()
+        self.srt = SrtFile(config.srt_path)
         self.osdGenStatus.update(0, self.video.get_total_frames(), 0)
         try:
             os.mkdir(self.output)
@@ -388,6 +422,7 @@ class OsdGenerator:
         osd_time = -1
         osd_frame = []
         current_frame = 1
+        srt_time = -1 
         video_fps = self.video.get_fps()
         total_frames = self.video.get_total_frames()
         video_size = self.video.get_size()
@@ -400,7 +435,6 @@ class OsdGenerator:
                 print("Process canceled.")
                 break
 
-         
 
             frames_per_ms = 1 / video_fps * 1000
             calc_video_time = int((current_frame - 1) * frames_per_ms)
@@ -417,6 +451,13 @@ class OsdGenerator:
                 Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 osd_time = raw_osd_frame.startTime
 
+
+            if srt_time < calc_video_time:
+                srt_data = self.srt.next_data()
+                srt_time = srt_data["startTime"]
+                srt_line = srt_data["line"]
+                cv2.putText(frame, srt_line, (20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0))
+            
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
             cv2.imwrite(out_path, frame)
 
