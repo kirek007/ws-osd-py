@@ -118,7 +118,7 @@ class Frame:
         glyphs_arr = []
         for x in range(0, len(self.rawData), 2):
             index, page = unpack("<BB", self.rawData[x:x + 2])
-            glyph = self.font.get_glyph(index + page * 255 )
+            glyph = self.font.get_glyph(index + page * 256)
             glyphs_arr.append(glyph)
 
         return glyphs_arr
