@@ -65,6 +65,11 @@ class OsdFont:
         font_w = self.font.shape[1]
         return font_w == self.GLYPH_HD_W
 
+    def get_srt_font_size(self):
+        if self.is_hd:
+            return 6
+        else: 
+            return 2
 
 
 class OSDFile:
@@ -182,7 +187,7 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale) -> None: 
+    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt) -> None: 
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
@@ -192,6 +197,7 @@ class OsdGenConfig:
         self.offset_top = offset_top
         self.osd_zoom = osd_zoom
         self.render_upscale = render_upscale
+        self.include_srt = include_srt
 
 class OsdGenStatus:
     def __init__(self) -> None:
@@ -266,6 +272,45 @@ class Utils:
 
         img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
 
+    @staticmethod
+    def overlay_srt_line(img, line, font_size):
+        pos_calc = (20, img.shape[0] - 30)
+        # pil_im = Image.fromarray(img)  
+        # draw = ImageDraw.Draw(pil_im, 'RGBA')  
+        # font = ImageFont.truetype("lucon.ttf", font_size)  
+        
+        # left, top, right, bottom = draw.textbbox(pos_calc, line, font=font)
+        # draw.rectangle((left-5, top-5, right+5, bottom+5), fill=(0, 0, 0, 125))
+        # draw.text(pos_calc, line, font=font, fill=(255, 255, 255, 255))
+        # return Utils.to_numpy(pil_im)
+
+
+        cv2.putText(img, line, pos_calc, cv2.FONT_ITALIC, 1/10 * font_size, (255, 255, 255, 255), 1)
+
+        return img
+
+
+
+    @staticmethod
+    def to_numpy(im):
+        im.load()
+        # unpack data
+        e = Image._getencoder(im.mode, 'raw', im.mode)
+        e.setimage(im.im)
+
+        # NumPy buffer for the result
+        shape, typestr = Image._conv_type_shape(im)
+        data = np.empty(shape, dtype=np.dtype(typestr))
+        mem = data.data.cast('B', (data.data.nbytes,))
+
+        bufsize, s, offset = 65536, 0, 0
+        while not s:
+            l, s, d = e.encode(bufsize)
+            mem[offset:offset + len(d)] = d
+            offset += len(d)
+        if s < 0:
+            raise RuntimeError("encoder error %d in tobytes" % s)
+        return data
 class OsdPreview:
 
     def __init__(self, config: OsdGenConfig):
@@ -275,10 +320,27 @@ class OsdPreview:
         self.font = OsdFont(config.font_path)
         self.osd = OSDFile(config.osd_path, self.font)
         self.video = VideoFile(config.video_path)
-        self.srt = SrtFile(config.srt_path)
+        if config.srt_path:
+            self.srt = SrtFile(config.srt_path)
+        else:
+            self.srt = None
         self.output = config.output_path
         self.config = config
 
+
+    def str_line_to_glyphs(self, line):
+        filler = self.font.get_glyph(32)
+        rssi = self.font.get_glyph(1)
+        glyphs = [filler, rssi]
+        for char in line:
+            gi = ord(char)
+            g = self.font.get_glyph(gi)
+            glyphs.append(g)
+
+        for x in range(len(glyphs), 53):
+            glyphs.append(filler)
+
+        return glyphs[:53]
 
 
     def generate_preview(self, osd_pos, osd_zomm):
@@ -287,28 +349,24 @@ class OsdPreview:
 
         for skipme in range(100):
             self.osd.read_frame()
-            srt_data = self.srt.next_data()
+            if self.srt:
+                srt_data = self.srt.next_data()
 
         osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
-        osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
 
+        osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
+        if self.srt and self.config.include_srt:
+            srt_line = srt_data["line"]
+            video_frame = Utils.overlay_srt_line(video_frame, srt_line, self.font.get_srt_font_size())
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
-        result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_CUBIC)
+        result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_AREA)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
-        srt_line = srt_data["line"]
-        # cv2.putText(result, srt_line, (20,20), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0, 0),2)
-        pil_im = Image.fromarray(result)  
-        draw = ImageDraw.Draw(pil_im, 'RGBA')  
-        font = ImageFont.truetype("lucon.ttf", 12)  
-
-        left, top, right, bottom = draw.textbbox((20,340), srt_line, font=font)
-        draw.rectangle((left-5, top-5, right+5, bottom+5), fill=(0, 0, 0, 125))
-        draw.text((20,340), srt_line, font=font, fill=(255, 0, 0, 125))
+        
 
 
-        return np.array(pil_im)
-
+        return result
+        # return result
 class SrtFile():
     def __init__(self, path):
         self.index = 0
@@ -318,10 +376,11 @@ class SrtFile():
     
     def next_data(self) -> dict:
         sub = self.subs[self.index]
-        # d = dict(x.split(":") for x in sub.split(" "))
+        data = dict(x.split(":") for x in sub.content.split(" "))
         d= dict()
         d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
-        d["line"] =  sub.content #sub.start.seconds / 1000 * sub.start.microseconds
+        d["data"] =  data #sub.start.seconds / 1000 * sub.start.microseconds
+        d["line"] = "          Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
         self.index += 1
         return d
 
@@ -338,7 +397,10 @@ class OsdGenerator:
         self.output = config.output_path
         self.config = config
         self.osdGenStatus = OsdGenStatus()
-        self.srt = SrtFile(config.srt_path)
+        if config.srt_path:
+            self.srt = SrtFile(config.srt_path)
+        else:
+            self.srt = None
         self.osdGenStatus.update(0, self.video.get_total_frames(), 0)
         try:
             os.mkdir(self.output)
@@ -442,24 +504,27 @@ class OsdGenerator:
             if current_frame >= total_frames:
                 break
 
+            if self.srt and self.config.include_srt:
+                if srt_time < calc_video_time:
+                    srt_data = self.srt.next_data()
+                    srt_time = srt_data["startTime"]
+
             if osd_time < calc_video_time:
                 raw_osd_frame = self.osd.read_frame()
                 if not raw_osd_frame:
                     break
                 frame = transparent_img.copy()
                 osd_frame = self.__render_osd_frame(raw_osd_frame.get_osd_frame_glyphs())
-                Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 osd_time = raw_osd_frame.startTime
+                Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
+                if self.srt and self.config.include_srt:
+                    result = Utils.overlay_srt_line(frame, srt_data["line"] , self.font.get_srt_font_size())
+                else:
+                    result = frame
 
 
-            if srt_time < calc_video_time:
-                srt_data = self.srt.next_data()
-                srt_time = srt_data["startTime"]
-                srt_line = srt_data["line"]
-                cv2.putText(frame, srt_line, (20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0))
-            
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
-            cv2.imwrite(out_path, frame)
+            cv2.imwrite(out_path, result)
 
 
             current_frame+=1

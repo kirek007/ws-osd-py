@@ -63,14 +63,14 @@ class FileInputPanel(wx.Panel):
         self.lbl_output_info.SetForegroundColour((255,0,0))
 
         lbl_info.SetFont(self.font_default)
-        self.lbl_osd_sel.SetFont(self.font_bold)
-        self.lbl_osd_info.SetFont(self.font_bold)
-        self.lbl_video_sel.SetFont(self.font_bold)
-        self.lbl_video_info.SetFont(self.font_bold)
-        self.lbl_font_sel.SetFont(self.font_bold)
-        self.lbl_font_info.SetFont(self.font_bold)
-        self.lbl_output_sel.SetFont(self.font_bold)
-        self.lbl_output_info.SetFont(self.font_bold)
+        # self.lbl_osd_sel.SetFont(self.font_bold)
+        # self.lbl_osd_info.SetFont(self.font_bold)
+        # self.lbl_video_sel.SetFont(self.font_bold)
+        # self.lbl_video_info.SetFont(self.font_bold)
+        # self.lbl_font_sel.SetFont(self.font_bold)
+        # self.lbl_font_info.SetFont(self.font_bold)
+        # self.lbl_output_sel.SetFont(self.font_bold)
+        # self.lbl_output_info.SetFont(self.font_bold)
 
         box = wx.StaticBox(self, -1, "Import files")
         bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
@@ -216,7 +216,7 @@ class ButtonsPanel(wx.Panel):
             keepGoing, skip = pd.Update(status.current_frame)
             if not keepGoing:
                 appState.osd_cancel_process()
-                
+
         pd.Update(status.total_frames)
         if status.is_complete():
             mes = wx.MessageBox("OSD overlay files are in '%s' directory" % appState._output_path, "OK")
@@ -262,15 +262,24 @@ class OsdSettingsPanel(wx.Panel):
         hsizer.Add(vsizer)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         btnReset = wx.Button(self, label='Reset')
+        self.cbo_srt = wx.CheckBox(self, label="Include SRT data if loaded")
         btnReset.Bind(wx.EVT_BUTTON, self.btnResetClick)
-
 
         bsizer.Add(hsizer, 0, wx.LEFT)
         bsizer.Add(btnReset, 0, wx.CENTER)
+        bsizer.AddSpacer(10)
+        bsizer.Add(self.cbo_srt, 0, wx.CENTER)
         main_sizer = wx.BoxSizer()
         main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
         bsizer.AddSpacer(10)
         self.SetSizer(main_sizer)
+    
+        self.cbo_srt.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+
+    def chekboxClick(self, event):
+        appState._include_srt = bool(self.cbo_srt.Value)
+        pub.sendMessage(PubSubEvents.ConfigUpdate)
+
 
     def btnResetClick(self, event):
         self.osdOffsetLeft.SetValue(0)
