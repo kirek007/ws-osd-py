@@ -124,10 +124,11 @@ class Frame:
 
         self.hide = True
         self.glyph_hide_start = [
-            3,
-            4,
-            118,
-            119
+            3, # gps
+            4, # gps
+            16, # home distance
+            345, # alt symb
+
         ]
         self.glyph_hide_len = [
             5,
@@ -135,7 +136,7 @@ class Frame:
             3,
             3,
         ]
-        self.mask_glyph_no = ord("X")
+        self.mask_glyph_no = ord("*")
         self.curent_mask_index = -1
         self.curent_mask_counter = 0
 
