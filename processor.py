@@ -390,7 +390,7 @@ class OsdPreview:
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
         if self.srt and self.config.include_srt:
             srt_line = srt_data["line"]
-            video_frame = Utils.overlay_srt_line(video_frame, srt_line, self.font.get_srt_font_size())
+            video_frame = Utils.overlay_srt_line(video_frame, srt_line, self.font.get_srt_font_size() * 2)
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_AREA)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
