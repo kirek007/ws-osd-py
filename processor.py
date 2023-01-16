@@ -122,11 +122,43 @@ class Frame:
         self.rawData = data[4:]
         self.font = font
 
+        self.hide = True
+        self.glyph_hide_start = [
+            3,
+            4,
+            118,
+            119
+        ]
+        self.glyph_hide_len = [
+            5,
+            5,
+            3,
+            3,
+        ]
+        self.mask_glyph_no = ord("X")
+        self.curent_mask_index = -1
+        self.curent_mask_counter = 0
+
     def __convert_to_glyphs(self):
         glyphs_arr = []
         for x in range(0, len(self.rawData), 2):
             index, page = unpack("<BB", self.rawData[x:x + 2])
-            glyph = self.font.get_glyph(index + page * 256)
+            glyph_index = index + page * 256
+
+            if glyph_index in self.glyph_hide_start:
+                self.curent_mask_index = self.glyph_hide_start.index(glyph_index)
+
+            if self.hide and self.curent_mask_index > 0:
+                if self.curent_mask_counter < self.glyph_hide_len[self.curent_mask_index]:
+                    
+                    if self.curent_mask_counter > 0:
+                        glyph_index = self.mask_glyph_no
+                    self.curent_mask_counter += 1
+                else:
+                    self.curent_mask_counter = 0
+                    self.curent_mask_index = -1
+                    
+            glyph = self.font.get_glyph(glyph_index)
             glyphs_arr.append(glyph)
 
         return glyphs_arr
