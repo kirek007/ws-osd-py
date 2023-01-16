@@ -216,7 +216,8 @@ class ButtonsPanel(wx.Panel):
             keepGoing, skip = pd.Update(status.current_frame)
             if not keepGoing:
                 appState.osd_cancel_process()
-        
+                
+        pd.Update(status.total_frames)
         if status.is_complete():
             mes = wx.MessageBox("OSD overlay files are in '%s' directory" % appState._output_path, "OK")
         else:
