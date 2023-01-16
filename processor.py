@@ -145,10 +145,10 @@ class Frame:
             index, page = unpack("<BB", self.rawData[x:x + 2])
             glyph_index = index + page * 256
 
-            if glyph_index in self.glyph_hide_start:
+            if self.hide and glyph_index in self.glyph_hide_start:
                 self.curent_mask_index = self.glyph_hide_start.index(glyph_index)
 
-            if self.hide and self.curent_mask_index > 0:
+            if self.hide and self.curent_mask_index > -1:
                 if self.curent_mask_counter < self.glyph_hide_len[self.curent_mask_index]:
                     
                     if self.curent_mask_counter > 0:
@@ -157,7 +157,7 @@ class Frame:
                 else:
                     self.curent_mask_counter = 0
                     self.curent_mask_index = -1
-                    
+
             glyph = self.font.get_glyph(glyph_index)
             glyphs_arr.append(glyph)
 
