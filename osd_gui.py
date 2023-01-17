@@ -129,7 +129,7 @@ class FileInputPanel(wx.Panel):
             self.lbl_video_info.SetLabel("Recognized '%s' video." % video_size_text) 
 
         if appState.is_output_exists():
-            self.lbl_output_info.SetLabel("Output directory already exists, remove it to regenerate PNG files") 
+            self.lbl_output_info.SetLabel("Output directory already exists, remove it") 
         else:
             self.lbl_output_info.SetLabel("") 
 
@@ -188,9 +188,19 @@ class ButtonsPanel(wx.Panel):
     def eventConfigUpdate(self):
         configured = appState.is_configured()
         self.btnStartPng.Enable(configured)
-        self.btnStartVideo.Enable(appState.is_output_exists()) 
+        self.btnStartVideo.Enable(configured) 
     
     def btnStartVideoClick(self, event):
+        done = self._render_png()
+        if done:
+            self._render_video()
+
+        
+
+    def btnStartPngClick(self, event):
+        self._render_png()
+
+    def _render_video(self):
         status = appState.osd_init()
         pd = wx.ProgressDialog("Rendering video", "Check console log for status", 1, self, style=wx.PD_APP_MODAL)
         pd.Show()
@@ -203,9 +213,9 @@ class ButtonsPanel(wx.Panel):
         mes = wx.MessageBox("Render done.", "OK")
         pd.Destroy()
         pub.sendMessage(PubSubEvents.ConfigUpdate)
-        
 
-    def btnStartPngClick(self, event):
+    def _render_png(self):
+        canceled = False
         status = appState.osd_init()
         pd = wx.ProgressDialog("Generating OSD", "Processing frames...", status.total_frames + 1, self, style=wx.PD_CAN_ABORT | wx.PD_APP_MODAL | wx.PD_REMAINING_TIME | wx.PD_ELAPSED_TIME | wx.PD_SMOOTH)
         pd.Show()
@@ -215,6 +225,7 @@ class ButtonsPanel(wx.Panel):
             wx.MilliSleep(200)
             keepGoing, skip = pd.Update(status.current_frame)
             if not keepGoing:
+                canceled = True
                 appState.osd_cancel_process()
 
         pd.Update(status.total_frames)
@@ -226,6 +237,7 @@ class ButtonsPanel(wx.Panel):
         pd.Destroy()
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
+        return not canceled
 
 class OsdSettingsPanel(wx.Panel):
 
@@ -278,9 +290,13 @@ class OsdSettingsPanel(wx.Panel):
         self.SetSizer(main_sizer)
     
         self.cbo_srt.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+        self.cbo_hide_data.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+
+
 
     def chekboxClick(self, event):
         appState._include_srt = bool(self.cbo_srt.Value)
+        appState._hide_sensitive_osd = bool(self.cbo_hide_data.Value)
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
 

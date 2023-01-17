@@ -14,6 +14,7 @@ class AppState:
         self._srt_path = ""
         self._osd_gen = None
         self._include_srt = False
+        self._hide_sensitive_osd = False
 
         self.offsetLeft = 0
         self.offsetTop = 0
@@ -78,6 +79,7 @@ class AppState:
             self.osdZoom,
             self.render_upscale,
             self._include_srt,
+            self._hide_sensitive_osd
         )
 
     def osd_init(self) -> OsdGenStatus:

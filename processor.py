@@ -122,7 +122,6 @@ class Frame:
         self.rawData = data[4:]
         self.font = font
 
-        self.hide = True
         self.glyph_hide_start = [
             3, # gps
             4, # gps
@@ -131,8 +130,8 @@ class Frame:
 
         ]
         self.glyph_hide_len = [
-            5,
-            5,
+            6,
+            6,
             3,
             3,
         ]
@@ -140,16 +139,16 @@ class Frame:
         self.curent_mask_index = -1
         self.curent_mask_counter = 0
 
-    def __convert_to_glyphs(self):
+    def __convert_to_glyphs(self, hide):
         glyphs_arr = []
         for x in range(0, len(self.rawData), 2):
             index, page = unpack("<BB", self.rawData[x:x + 2])
             glyph_index = index + page * 256
 
-            if self.hide and glyph_index in self.glyph_hide_start:
+            if hide and glyph_index in self.glyph_hide_start:
                 self.curent_mask_index = self.glyph_hide_start.index(glyph_index)
 
-            if self.hide and self.curent_mask_index > -1:
+            if hide and self.curent_mask_index > -1:
                 if self.curent_mask_counter < self.glyph_hide_len[self.curent_mask_index]:
                     
                     if self.curent_mask_counter > 0:
@@ -164,8 +163,8 @@ class Frame:
 
         return glyphs_arr
 
-    def get_osd_frame_glyphs(self):
-        glyphs = self.__convert_to_glyphs()
+    def get_osd_frame_glyphs(self, hide):
+        glyphs = self.__convert_to_glyphs(hide)
         osd_frame = []
 
         gi = 0
@@ -220,7 +219,7 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt) -> None: 
+    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt, hide_sensitive_osd) -> None: 
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
@@ -231,6 +230,7 @@ class OsdGenConfig:
         self.osd_zoom = osd_zoom
         self.render_upscale = render_upscale
         self.include_srt = include_srt
+        self.hide_sensitive_osd = hide_sensitive_osd
 
 class OsdGenStatus:
     def __init__(self) -> None:
@@ -385,7 +385,7 @@ class OsdPreview:
             if self.srt:
                 srt_data = self.srt.next_data()
 
-        osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs()
+        osd_frame_glyphs =  self.osd.read_frame().get_osd_frame_glyphs(hide=self.config.hide_sensitive_osd)
 
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
         if self.srt and self.config.include_srt:
@@ -484,6 +484,7 @@ class OsdGenerator:
             ffmpeg
             .input(out_path, framerate=60)
             .filter("scale", **ff_size, force_original_aspect_ratio=0)
+            
         )
 
         video = (
@@ -547,7 +548,7 @@ class OsdGenerator:
                 if not raw_osd_frame:
                     break
                 frame = transparent_img.copy()
-                osd_frame = self.__render_osd_frame(raw_osd_frame.get_osd_frame_glyphs())
+                osd_frame = self.__render_osd_frame(raw_osd_frame.get_osd_frame_glyphs(hide=self.config.hide_sensitive_osd))
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 if self.srt and self.config.include_srt:
