@@ -380,7 +380,7 @@ class OsdPreview:
 
         video_frame = self.video.read_frame().data
 
-        for skipme in range(100):
+        for skipme in range(20):
             self.osd.read_frame()
             if self.srt:
                 srt_data = self.srt.next_data()
