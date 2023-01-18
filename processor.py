@@ -408,6 +408,8 @@ class SrtFile():
             
     
     def next_data(self) -> dict:
+        if self.index >= len(self.subs):
+            self.index = len(self.subs) -1
         sub = self.subs[self.index]
         data = dict(x.split(":") for x in sub.content.split(" "))
         d= dict()
@@ -430,6 +432,7 @@ class OsdGenerator:
         self.output = config.output_path
         self.config = config
         self.osdGenStatus = OsdGenStatus()
+        self.render_done = False
         if config.srt_path:
             self.srt = SrtFile(config.srt_path)
         else:
@@ -502,12 +505,7 @@ class OsdGenerator:
             .overwrite_output() 
             .run()
         )
-
         self.render_done = True
-
-    def render_example(self):
-        frame = []
-        return frame
 
     def main(self): 
         cps = CountsPerSec().start()
@@ -567,14 +565,13 @@ class OsdGenerator:
             self.osdGenStatus.update(current_frame, total_frames, fps)
 
             if current_frame % 200 == 0:
-                
-                print("Current: %s/%s (fps: %d)" % (current_frame, total_frames, fps))
+                logging.debug("Current: %s/%s (fps: %d)" % (current_frame, total_frames, fps))
         
         pr.disable()
         s = io.StringIO()
         sortby = SortKey.CUMULATIVE
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
-        print(s.getvalue())
-        print("Done.")
+        logging.debug(s.getvalue())
+
 
