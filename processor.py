@@ -476,7 +476,7 @@ class OsdGenerator:
 
     def load_codecs(self):
 
-        macos = "macos"
+        macos = "darwin"
         windows = "windows"
         linux = "linux"
         codecs = []
