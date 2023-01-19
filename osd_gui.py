@@ -283,7 +283,7 @@ class OsdSettingsPanel(wx.Panel):
         self.cbo_hide_data = wx.CheckBox(
             self, label="Hide sensitive OSD values (GPS, Alt, Home dist)")
         self.cbo_use_hw = wx.CheckBox(
-            self, label="Use hardware acceleration for video enconding (only Nvidia, experimental)")
+            self, label="Use hardware acceleration for video enconding (experimental)")
         btnReset.Bind(wx.EVT_BUTTON, self.btnResetClick)
 
         bsizer.Add(hsizer, 0, wx.LEFT)
