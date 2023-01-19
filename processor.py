@@ -1,14 +1,17 @@
 import cProfile
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 import io
 import logging
 import multiprocessing
 import os
 from datetime import datetime
+import platform
 from pstats import SortKey
 import pstats
 import queue
 from struct import unpack
+import subprocess
 from threading import Thread
 import cv2
 import numpy as np
@@ -433,6 +436,19 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
         self._work_queue = queue.Queue(maxsize=maxsize)
 
 
+@dataclass()
+class CodecItem:
+    supported_os: list
+    name: str
+
+@dataclass
+class CodecsList:
+    codecs: list[CodecItem] = field(default_factory=list)
+
+    def getbyOS(self, os_name: str) -> list[CodecItem]:
+        return list(filter(lambda codec: os_name in codec.supported_os, self.codecs))
+
+
 class OsdGenerator:
 
     def __init__(self, config: OsdGenConfig):
@@ -446,6 +462,8 @@ class OsdGenerator:
         self.osdGenStatus = OsdGenStatus()
         self.render_done = False
         self.use_hw = config.use_hw
+        self.codecs = CodecsList(self.load_codecs())
+
         if config.srt_path:
             self.srt = SrtFile(config.srt_path)
         else:
@@ -456,6 +474,39 @@ class OsdGenerator:
         except:
             pass
 
+    def load_codecs(self):
+
+        macos = "darwin"
+        windows = "windows"
+        linux = "linux"
+        codecs = []
+        if self.use_hw:
+            codecs.append(CodecItem(name="hevc_videotoolbox", supported_os=[macos]))
+            codecs.append(CodecItem(name="hevc_nvenc", supported_os=[windows, linux]))
+            codecs.append(CodecItem(name="hevc_amf", supported_os=[windows]))
+            codecs.append(CodecItem(name="hevc_vaapi", supported_os=[linux]))
+            codecs.append(CodecItem(name="hevc_qsv", supported_os=[linux, windows]))
+            codecs.append(CodecItem(name="hevc_mf", supported_os=[windows]))
+            codecs.append(CodecItem(name="hevc_v4l2m2m", supported_os=[linux]))
+
+        codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
+
+        return codecs
+
+    def get_working_encoder(self):
+        available_codecs = self.codecs.getbyOS(platform.system().lower())
+        run_line = "ffmpeg -y -hwaccel auto -f lavfi -i nullsrc -c:v %s -frames:v 1 -f null -"
+        for codec in available_codecs:
+            runme = (run_line % codec.name).split(" ")
+            ret = subprocess.run(runme, 
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            if ret.returncode == 0:
+                logging.info("Found a working codec (%s)" % codec.name)
+                return codec.name
+            
+        raise Exception("There is no valid codedc. It should not happen")
+        
     def start_video(self, upscale: bool):
         Thread(target=self.render, args=()).start()
         return self
@@ -501,45 +552,24 @@ class OsdGenerator:
 
         )
 
-        hw_input_args = {
-            "hwaccel": "nvdec",
-            "vcodec": "h264_cuvid",
-            "c:v": "h264_cuvid"
-        }
-        cpu_input_args = {
+        input_args = {
             "hwaccel": "auto",
-            "vcodec": "h264",
-            "c:v": "h264"
         }
-        
-        input_args = hw_input_args if self.use_hw else cpu_input_args
-        
+
         video = (
             ffmpeg
             .input(self.config.video_path, **input_args)
             .filter("scale", **ff_size, force_original_aspect_ratio=1, )
         )
-
+        encoder_name = self.get_working_encoder()
+        output_args = {
+            "c:v": encoder_name,
+            "preset": "fast",
+            "crf": 0,
+            "b:v": "40M",
+            "acodec": "copy"
+        }
         self.render_done = False
-
-        hw_output_args = {
-            "vcodec": "hevc_nvenc",
-            "c:v": "hevc_nvenc",
-            "preset": "fast",
-            "crf": 0,
-            "b:v": "40M",
-            "acodec": "copy"
-        }
-        cpu_output_args = {
-            "vcodec": "hevc",
-            "c:v": "hevc",
-            "preset": "fast",
-            "crf": 0,
-            "b:v": "40M",
-            "acodec": "copy"
-        }
-        output_args = hw_output_args if self.use_hw else cpu_output_args
-        
         process = (
             video
             .filter("pad", **ff_size, x=-1, y=-1, color="black")
@@ -596,9 +626,12 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left,
                                    self.config.offset_top, self.config.osd_zoom)
+                
             if self.srt and self.config.include_srt:
                 result = Utils.overlay_srt_line(frame, srt_data["line"], self.font.get_srt_font_size(
                     ), (150 if self.font.is_hd() else 100))
+            else:
+                result = frame
                 
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
             executor.submit(cv2.imwrite, out_path, result)
