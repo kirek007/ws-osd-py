@@ -66,10 +66,10 @@ class OsdFont:
         return font_w == self.GLYPH_HD_W
 
     def get_srt_font_size(self):
-        if self.is_hd:
-            return 6
+        if self.is_hd():
+            return 32
         else: 
-            return 2
+            return 24
 
 
 class OSDFile:
@@ -247,7 +247,7 @@ class OsdGenStatus:
         return self.current_frame >= self.total_frames
 
 class Utils:
-    
+  
     @staticmethod
     def merge_images(img, overlay, x, y, zoom):
         scale_percent = zoom # percent of original size
@@ -306,21 +306,22 @@ class Utils:
         img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
 
     @staticmethod
-    def overlay_srt_line(img, line, font_size):
-        pos_calc = (20, img.shape[0] - 30)
-        # pil_im = Image.fromarray(img)  
-        # draw = ImageDraw.Draw(pil_im, 'RGBA')  
-        # font = ImageFont.truetype("lucon.ttf", font_size)  
+    def overlay_srt_line(img, line, font_size, left_offset):
+        pos_calc = (left_offset, img.shape[0] - 15)
+        pil_im = Image.fromarray(img)  
+        draw = ImageDraw.Draw(pil_im, 'RGBA')  
+        font = ImageFont.truetype("font.ttf", font_size)  
         
-        # left, top, right, bottom = draw.textbbox(pos_calc, line, font=font)
+        # left, top, right, bottom = draw.textbbox(pos_calc, line, font=font, anchor="lb")
         # draw.rectangle((left-5, top-5, right+5, bottom+5), fill=(0, 0, 0, 125))
-        # draw.text(pos_calc, line, font=font, fill=(255, 255, 255, 255))
-        # return Utils.to_numpy(pil_im)
+        draw.text(pos_calc, line, font=font, fill=(255, 255, 255, 255), anchor="lb")
+        return Utils.to_numpy(pil_im)
 
 
-        cv2.putText(img, line, pos_calc, cv2.FONT_ITALIC, 1/10 * font_size, (255, 255, 255, 255), 1)
+        # pos_calc = (20, img.shape[0] - 30)
+        # cv2.putText(img, line, pos_calc, cv2.FONT_ITALIC, 1/10 * font_size, (255, 255, 255, 255), 1)
 
-        return img
+        # return img
 
 
 
@@ -390,7 +391,7 @@ class OsdPreview:
         osd_frame = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in osd_frame_glyphs])
         if self.srt and self.config.include_srt:
             srt_line = srt_data["line"]
-            video_frame = Utils.overlay_srt_line(video_frame, srt_line, self.font.get_srt_font_size() * 2)
+            video_frame = Utils.overlay_srt_line(video_frame, srt_line, self.font.get_srt_font_size(), (150 if self.font.is_hd() else 100))
         Utils.overlay_image_alpha(video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (640, 360), interpolation = cv2.INTER_AREA)
         result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
@@ -415,7 +416,7 @@ class SrtFile():
         d= dict()
         d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
         d["data"] =  data #sub.start.seconds / 1000 * sub.start.microseconds
-        d["line"] = "          Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
+        d["line"] = "Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
         self.index += 1
         return d
 
@@ -550,7 +551,7 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left, self.config.offset_top, self.config.osd_zoom)
                 if self.srt and self.config.include_srt:
-                    result = Utils.overlay_srt_line(frame, srt_data["line"] , self.font.get_srt_font_size())
+                    result = Utils.overlay_srt_line(frame, srt_data["line"] , self.font.get_srt_font_size(), (150 if self.font.is_hd() else 100))
                 else:
                     result = frame
 

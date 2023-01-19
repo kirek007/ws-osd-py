@@ -194,11 +194,13 @@ class ButtonsPanel(wx.Panel):
         done = self._render_png()
         if done:
             self._render_video()
+            mes = wx.MessageBox("Render done.", "OK")
 
         
 
     def btnStartPngClick(self, event):
-        self._render_png()
+        if self._render_png():
+            mes = wx.MessageBox("OSD overlay files are in '%s' directory" % appState._output_path, "OK")
 
     def _render_video(self):
         status = appState.osd_init()
@@ -210,7 +212,6 @@ class ButtonsPanel(wx.Panel):
             wx.MilliSleep(200)
             pd.Update(0)
         pd.Update(1)
-        mes = wx.MessageBox("Render done.", "OK")
         pd.Destroy()
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
@@ -229,11 +230,6 @@ class ButtonsPanel(wx.Panel):
                 appState.osd_cancel_process()
 
         pd.Update(status.total_frames)
-        if status.is_complete():
-            mes = wx.MessageBox("OSD overlay files are in '%s' directory" % appState._output_path, "OK")
-        else:
-            mes = wx.MessageBox("Process canceled.", "CANCELED")
-            
         pd.Destroy()
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
