@@ -491,18 +491,37 @@ class OsdGenerator:
             
         )
 
+        input_args = {
+            "hwaccel": "nvdec",
+            "vcodec": "h264_cuvid",
+            "c:v": "h264_cuvid"
+        }
+
         video = (
             ffmpeg
-            .input(self.config.video_path)
-            .filter("scale", **ff_size, force_original_aspect_ratio=1)
+            .input(self.config.video_path, **input_args)
+            .filter("scale", **ff_size, force_original_aspect_ratio=1, )
         )
 
         self.render_done = False
+
+
+
+        output_args = {
+            "vcodec": "hevc_nvenc",
+            "c:v": "hevc_nvenc",
+            "preset": "fast",
+            "crf": 0,
+            "b:v": "40M",
+            "acodec": "copy"
+        }
+
+
         process = (
             video
             .filter("pad", **ff_size, x=-1, y=-1, color="black")
             .overlay(osd_frame, x=0, y=0)
-            .output("%s_osd.mp4" % (self.output), video_bitrate="40M")
+            .output("%s_osd.mp4" % (self.output),  **output_args)
             .overwrite_output() 
             .run()
         )
