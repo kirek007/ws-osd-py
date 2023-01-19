@@ -25,15 +25,16 @@ def load_codecs():
     linux = "linux"
     codecs = []
 
-    codecs.append(CodecItem(name="hevc_videotoolbox", supported_os=[macos]))
-    codecs.append(CodecItem(name="hevc_nvenc", supported_os=[windows, linux]))
-    codecs.append(CodecItem(name="hevc_amf", supported_os=[windows]))
-    codecs.append(CodecItem(name="hevc_vaapi", supported_os=[linux]))
-    codecs.append(CodecItem(name="hevc_qsv", supported_os=[linux, windows]))
-    codecs.append(CodecItem(name="hevc_mf", supported_os=[windows]))
-    codecs.append(CodecItem(name="hevc_v4l2m2m", supported_os=[linux]))
+    codecs.append(CodecItem(name="h264_videotoolbox", supported_os=[macos]))
+    codecs.append(CodecItem(name="h264_cuvid", supported_os=[windows, linux]))
+    codecs.append(CodecItem(name="h264_nvenc", supported_os=[windows, linux]))
+    codecs.append(CodecItem(name="h264_amf", supported_os=[windows]))
+    codecs.append(CodecItem(name="h264_vaapi", supported_os=[linux]))
+    codecs.append(CodecItem(name="h264_qsv", supported_os=[linux, windows]))
+    codecs.append(CodecItem(name="h264_mf", supported_os=[windows]))
+    codecs.append(CodecItem(name="h264_v4l2m2m", supported_os=[linux]))
 
-    codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
+    codecs.append(CodecItem(name="libx264", supported_os=[macos, windows, linux]))
     logging.info("tesT")
 
     return codecs
@@ -45,11 +46,17 @@ def get_working_encoder():
 
 codecs = CodecsList(load_codecs())
 aa= codecs.getbyOS(platform.system().lower())
-run_line = "ffmpeg -y -hwaccel auto -f lavfi -i nullsrc -c:v %s -frames:v 1 test.mp4"
+run_line = "ffmpeg -y -hwaccel auto -c:v %s -f lavfi -i nullsrc -c:v %s -frames:v 1 -f null -"
 for codec in aa:
-    # ret = os.system(run_line % codec.name)
-    ret = subprocess.run(run_line % codec.name, 
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL)
+    runme = (run_line % (codec.name, codec.name)).split(" ")
+    ret = subprocess.run(runme)
+    # , 
+    #     stdout=subprocess.DEVNULL,
+    #     stderr=subprocess.DEVNULL)
+
     if ret.returncode == 0:
-        print("Coded %s works fine!" % codec.name )
+        print(codec)
+        
+        
+        
+            # ret = os.system(run_line % codec.name)
