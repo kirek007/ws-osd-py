@@ -282,6 +282,8 @@ class OsdSettingsPanel(wx.Panel):
         self.cbo_srt = wx.CheckBox(self, label="Include SRT data if loaded")
         self.cbo_hide_data = wx.CheckBox(
             self, label="Hide sensitive OSD values (GPS, Alt, Home dist)")
+        self.cbo_use_hw = wx.CheckBox(
+            self, label="Use hardware acceleration for video enconding (only Nvidia, experimental)")
         btnReset.Bind(wx.EVT_BUTTON, self.btnResetClick)
 
         bsizer.Add(hsizer, 0, wx.LEFT)
@@ -290,6 +292,8 @@ class OsdSettingsPanel(wx.Panel):
         bsizer.Add(self.cbo_srt, 0, wx.CENTER)
         bsizer.AddSpacer(10)
         bsizer.Add(self.cbo_hide_data, 0, wx.CENTER)
+        bsizer.AddSpacer(10)
+        bsizer.Add(self.cbo_use_hw, 0, wx.CENTER)
         main_sizer = wx.BoxSizer()
         main_sizer.Add(bsizer, 1, wx.EXPAND | wx.ALL, 10)
         bsizer.AddSpacer(10)
@@ -297,10 +301,12 @@ class OsdSettingsPanel(wx.Panel):
 
         self.cbo_srt.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
         self.cbo_hide_data.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+        self.cbo_use_hw.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
 
     def chekboxClick(self, event):
         appState._include_srt = bool(self.cbo_srt.Value)
         appState._hide_sensitive_osd = bool(self.cbo_hide_data.Value)
+        appState._use_hw = bool(self.cbo_use_hw.Value)
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
     def btnResetClick(self, event):

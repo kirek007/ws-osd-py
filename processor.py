@@ -219,7 +219,7 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt, hide_sensitive_osd) -> None:
+    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt, hide_sensitive_osd, use_hw) -> None:
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
@@ -231,6 +231,7 @@ class OsdGenConfig:
         self.render_upscale = render_upscale
         self.include_srt = include_srt
         self.hide_sensitive_osd = hide_sensitive_osd
+        self.use_hw = use_hw
 
 
 class OsdGenStatus:
@@ -419,8 +420,8 @@ class SrtFile():
         d = dict()
         d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
         d["data"] = data  # sub.start.seconds / 1000 * sub.start.microseconds
-        d["line"] = "Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (
-            data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
+        d["line"] = "Time: %3s   Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (
+            data["FlightTime"], data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
         self.index += 1
         return d
 
@@ -444,6 +445,7 @@ class OsdGenerator:
         self.config = config
         self.osdGenStatus = OsdGenStatus()
         self.render_done = False
+        self.use_hw = config.use_hw
         if config.srt_path:
             self.srt = SrtFile(config.srt_path)
         else:
@@ -499,12 +501,19 @@ class OsdGenerator:
 
         )
 
-        input_args = {
+        hw_input_args = {
             "hwaccel": "nvdec",
             "vcodec": "h264_cuvid",
             "c:v": "h264_cuvid"
         }
-
+        cpu_input_args = {
+            "hwaccel": "auto",
+            "vcodec": "h264",
+            "c:v": "h264"
+        }
+        
+        input_args = hw_input_args if self.use_hw else cpu_input_args
+        
         video = (
             ffmpeg
             .input(self.config.video_path, **input_args)
@@ -513,7 +522,7 @@ class OsdGenerator:
 
         self.render_done = False
 
-        output_args = {
+        hw_output_args = {
             "vcodec": "hevc_nvenc",
             "c:v": "hevc_nvenc",
             "preset": "fast",
@@ -521,7 +530,16 @@ class OsdGenerator:
             "b:v": "40M",
             "acodec": "copy"
         }
-
+        cpu_output_args = {
+            "vcodec": "hevc",
+            "c:v": "hevc",
+            "preset": "fast",
+            "crf": 0,
+            "b:v": "40M",
+            "acodec": "copy"
+        }
+        output_args = hw_output_args if self.use_hw else cpu_output_args
+        
         process = (
             video
             .filter("pad", **ff_size, x=-1, y=-1, color="black")
@@ -578,14 +596,11 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left,
                                    self.config.offset_top, self.config.osd_zoom)
-                if self.srt and self.config.include_srt:
-                    result = Utils.overlay_srt_line(frame, srt_data["line"], self.font.get_srt_font_size(
+            if self.srt and self.config.include_srt:
+                result = Utils.overlay_srt_line(frame, srt_data["line"], self.font.get_srt_font_size(
                     ), (150 if self.font.is_hd() else 100))
-                else:
-                    result = frame
-
-            out_path = os.path.join(
-                self.output, "ws_%09d.png" % (current_frame))
+                
+            out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
             executor.submit(cv2.imwrite, out_path, result)
 
             current_frame += 1
