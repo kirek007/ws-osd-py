@@ -1,10 +1,12 @@
 import cProfile
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 import io
 import logging
 import multiprocessing
 import os
 from datetime import datetime
+import platform
 from pstats import SortKey
 import pstats
 import queue
@@ -433,6 +435,19 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
         self._work_queue = queue.Queue(maxsize=maxsize)
 
 
+@dataclass()
+class CodecItem:
+    supported_os: list
+    name: str
+
+@dataclass
+class CodecsList:
+    codecs: list[CodecItem] = field(default_factory=list)
+
+    def getbyOS(self, os_name: str) -> list[CodecItem]:
+        return list(filter(lambda codec: os_name in codec.supported_os, self.codecs))
+
+
 class OsdGenerator:
 
     def __init__(self, config: OsdGenConfig):
@@ -446,6 +461,8 @@ class OsdGenerator:
         self.osdGenStatus = OsdGenStatus()
         self.render_done = False
         self.use_hw = config.use_hw
+        self.codecs = CodecsList(self.load_codecs())
+        self.get_encoder()
         if config.srt_path:
             self.srt = SrtFile(config.srt_path)
         else:
@@ -456,6 +473,30 @@ class OsdGenerator:
         except:
             pass
 
+    def load_codecs(self):
+
+        macos = "macos"
+        windows = "windows"
+        linux = "linux"
+        codecs = []
+        if self.use_hw:
+            codecs.append(CodecItem(name="hevc_videotoolbox", supported_os=[macos]))
+            codecs.append(CodecItem(name="hevc_nvenc", supported_os=[windows, linux]))
+            codecs.append(CodecItem(name="hevc_amf", supported_os=[windows]))
+            codecs.append(CodecItem(name="hevc_vaapi", supported_os=[linux]))
+            codecs.append(CodecItem(name="hevc_qsv", supported_os=[linux, windows]))
+            codecs.append(CodecItem(name="hevc_mf", supported_os=[windows]))
+            codecs.append(CodecItem(name="hevc_v4l2m2m", supported_os=[linux]))
+
+        codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
+
+        return codecs
+
+    def get_working_encoder(self):
+        available_codecs = self.codecs.getbyOS(platform.system().lower())
+        logging.info("Got these: %s", available_codecs)
+        # ffmpeg -hwaccel auto -f lavfi -i nullsrc -c:v hevc_nvenc -frames:v 1 test.mp4
+        
     def start_video(self, upscale: bool):
         Thread(target=self.render, args=()).start()
         return self
