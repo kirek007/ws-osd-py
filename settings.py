@@ -11,7 +11,11 @@ class AppState:
         self._osd_path = ""
         self._font_path = ""
         self._output_path = ""
+        self._srt_path = ""
         self._osd_gen = None
+        self._include_srt = False
+        self._hide_sensitive_osd = False
+        self._use_hw = False
 
         self.offsetLeft = 0
         self.offsetTop = 0
@@ -28,15 +32,14 @@ class AppState:
         file_ext = pathlib.Path(path).suffix
 
         match file_ext:
-            case ".osd":
-                self._osd_path = path
+            case ".osd"|".mp4"|".srt":
                 video = os.fspath(pathlib.Path(path).with_suffix('.mp4'))
+                srt = os.fspath(pathlib.Path(path).with_suffix('.srt'))
+                osd = os.fspath(pathlib.Path(path).with_suffix('.osd'))
                 if os.path.exists(video):
                     self._video_path = video
-                self.update_output_path(path)
-            case ".mp4":
-                self._video_path = path
-                osd = os.fspath(pathlib.Path(path).with_suffix('.osd'))
+                if os.path.exists(srt):
+                    self._srt_path = srt
                 if os.path.exists(osd):
                     self._osd_path = osd
                 self.update_output_path(path)
@@ -70,11 +73,15 @@ class AppState:
             self._video_path,
             self._osd_path,
             self._font_path,
+            self._srt_path,
             self._output_path,
             self.offsetLeft,
             self.offsetTop,
             self.osdZoom,
-            self.render_upscale
+            self.render_upscale,
+            self._include_srt,
+            self._hide_sensitive_osd,
+            self._use_hw
         )
 
     def osd_init(self) -> OsdGenStatus:
