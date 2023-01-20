@@ -37,7 +37,6 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       with:
         tag_name: master-${{ github.sha }}
         name: Pre-release ${{ github.sha }}
