@@ -35,14 +35,14 @@ jobs:
         tar -a -c -f "pre-release-${{ github.sha }}-windows.zip" release
 
 
-    - name: Create pre-release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
       with:
         tag_name: master-${{ github.sha }}
-        release_name: Pre-release ${{ github.sha }}
-        draft: false
+        name: Pre-release ${{ github.sha }}
         prerelease: true
-        assets: pre-release-${{ github.sha }}-windows.zip
+        fail_on_unmatched_files: true
+        generate_release_notes: true
+        files: pre-release-${{ github.sha }}-windows.zip
+        append_body: "This is latest build from master branch"
