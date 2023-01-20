@@ -32,7 +32,7 @@ jobs:
         mkdir release
         cp resources/* release
         cp dist/ws_osd_gen.exe release
-        tar -a -c -f "pre-release-${{ github.ref }}-windows.zip" release
+        tar -a -c -f "pre-release-${{ github.sha }}-windows.zip" release
 
 
     - name: Create pre-release
@@ -41,8 +41,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Pre-release ${{ github.ref }}
+        tag_name: master-${{ github.sha }}
+        release_name: Pre-release ${{ github.sha }}
         draft: false
-        prerelease: false
-        assets: pre-release-${{ github.ref }}-windows.zip
+        prerelease: true
+        assets: pre-release-${{ github.sha }}-windows.zip
