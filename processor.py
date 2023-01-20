@@ -423,7 +423,7 @@ class SrtFile():
         d = dict()
         d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
         d["data"] = data  # sub.start.seconds / 1000 * sub.start.microseconds
-        d["line"] = "Time: %3s   Signal:%1s   Delay:%5s   Bitrate:%7s   Disatnce:%5s" % (
+        d["line"] = "Time: %3s   Signal:%1s   Delay:%5s   Bitrate:%7s   Distance:%5s" % (
             data["FlightTime"], data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
         self.index += 1
         return d
