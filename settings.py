@@ -16,6 +16,7 @@ class AppState:
         self._include_srt = False
         self._hide_sensitive_osd = False
         self._use_hw = False
+        self._fast_srt = True
 
         self.offsetLeft = 0
         self.offsetTop = 0
@@ -81,7 +82,8 @@ class AppState:
             self.render_upscale,
             self._include_srt,
             self._hide_sensitive_osd,
-            self._use_hw
+            self._use_hw,
+            self._fast_srt
         )
 
     def osd_init(self) -> OsdGenStatus:

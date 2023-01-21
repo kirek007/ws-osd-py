@@ -280,6 +280,8 @@ class OsdSettingsPanel(wx.Panel):
         vsizer = wx.BoxSizer(wx.VERTICAL)
         btnReset = wx.Button(self, label='Reset')
         self.cbo_srt = wx.CheckBox(self, label="Include SRT data if loaded")
+        self.cbo_srt_fast = wx.CheckBox(self, label="Fast SRT render (less pretty font")
+        
         self.cbo_hide_data = wx.CheckBox(
             self, label="Hide sensitive OSD values (GPS, Alt, Home dist)")
         self.cbo_use_hw = wx.CheckBox(
@@ -290,6 +292,7 @@ class OsdSettingsPanel(wx.Panel):
         bsizer.Add(btnReset, 0, wx.CENTER)
         bsizer.AddSpacer(10)
         bsizer.Add(self.cbo_srt, 0, wx.CENTER)
+        bsizer.Add(self.cbo_srt_fast, 0, wx.CENTER)
         bsizer.AddSpacer(10)
         bsizer.Add(self.cbo_hide_data, 0, wx.CENTER)
         bsizer.AddSpacer(10)
@@ -299,14 +302,20 @@ class OsdSettingsPanel(wx.Panel):
         bsizer.AddSpacer(10)
         self.SetSizer(main_sizer)
 
+        self.cbo_srt_fast.Value = True
+        self.cbo_srt.Value = True
         self.cbo_srt.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
         self.cbo_hide_data.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
         self.cbo_use_hw.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+        self.cbo_srt_fast.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
+        
+        self.chekboxClick(None)
 
     def chekboxClick(self, event):
         appState._include_srt = bool(self.cbo_srt.Value)
         appState._hide_sensitive_osd = bool(self.cbo_hide_data.Value)
         appState._use_hw = bool(self.cbo_use_hw.Value)
+        appState._fast_srt = bool(self.cbo_srt_fast.Value)
         pub.sendMessage(PubSubEvents.ConfigUpdate)
 
     def btnResetClick(self, event):
