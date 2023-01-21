@@ -319,8 +319,6 @@ class Utils:
         draw = ImageDraw.Draw(pil_im, 'RGBA')
         font = ImageFont.truetype("font.ttf", font_size)
 
-        # left, top, right, bottom = draw.textbbox(pos_calc, line, font=font, anchor="lb")
-        # draw.rectangle((left-5, top-5, right+5, bottom+5), fill=(0, 0, 0, 125))
         draw.text(pos_calc, line, font=font, fill=(
             255, 255, 255, 255), anchor="lb")
         return Utils.to_numpy(pil_im)
@@ -329,7 +327,14 @@ class Utils:
         # cv2.putText(img, line, pos_calc, cv2.FONT_ITALIC, 1/10 * font_size, (255, 255, 255, 255), 1)
 
         # return img
+        
+    @staticmethod
+    def overlay_srt_line_fast(img, line, font_size, left_offset):
+        left_offset = 200 if img.shape[1] > 1300 else 100 
+        pos_calc = (left_offset, img.shape[0] - 30)
+        cv2.putText(img, line, pos_calc, cv2.FONT_HERSHEY_COMPLEX, 1/50 * font_size, (255, 255, 255, 255), 1)
 
+        return img
     @staticmethod
     def to_numpy(im):
         im.load()
@@ -397,7 +402,7 @@ class OsdPreview:
                                 for im_list_h in osd_frame_glyphs])
         if self.srt and self.config.include_srt:
             srt_line = srt_data["line"]
-            video_frame = Utils.overlay_srt_line(
+            video_frame = Utils.overlay_srt_line_fast(
                 video_frame, srt_line, self.font.get_srt_font_size(), (150 if self.font.is_hd() else 100))
         Utils.overlay_image_alpha(
             video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
@@ -421,10 +426,10 @@ class SrtFile():
         sub = self.subs[self.index]
         data = dict(x.split(":") for x in sub.content.split(" "))
         d = dict()
-        d["startTime"] = sub.start.seconds / 1000 * sub.start.microseconds
+        d["startTime"] = sub.start.seconds * 1000 + sub.start.microseconds / 1000
         d["data"] = data  # sub.start.seconds / 1000 * sub.start.microseconds
-        d["line"] = "Time: %3s   Signal:%1s   Delay:%5s   Bitrate:%7s   Distance:%5s" % (
-            data["FlightTime"], data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
+        d["line"] = "Signal:%1s   Delay:%5s   Bitrate:%7s   Distance:%5s" % (
+            data["Signal"], data["Delay"],  data["Bitrate"], data["Distance"])
         self.index += 1
         return d
 
@@ -628,11 +633,11 @@ class OsdGenerator:
                                    self.config.offset_top, self.config.osd_zoom)
                 
             if self.srt and self.config.include_srt:
-                result = Utils.overlay_srt_line(frame, srt_data["line"], self.font.get_srt_font_size(
+                result = Utils.overlay_srt_line_fast(frame, srt_data["line"], self.font.get_srt_font_size(
                     ), (150 if self.font.is_hd() else 100))
             else:
                 result = frame
-                
+            # logging.debug(f"frame':{current_frame},'total':{total_frames},'srt':{srt_time},'osd':{osd_time},'video':{calc_video_time}")
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
             executor.submit(cv2.imwrite, out_path, result)
 
