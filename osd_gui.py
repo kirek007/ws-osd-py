@@ -304,6 +304,8 @@ class OsdSettingsPanel(wx.Panel):
 
         self.cbo_srt_fast.Value = True
         self.cbo_srt.Value = True
+        self.cbo_use_hw.Value = True
+        
         self.cbo_srt.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
         self.cbo_hide_data.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
         self.cbo_use_hw.Bind(wx.EVT_CHECKBOX, self.chekboxClick)
