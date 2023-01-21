@@ -624,11 +624,6 @@ class OsdGenerator:
             if current_frame >= total_frames:
                 break
 
-            if self.srt and self.config.include_srt:
-                if srt_time < calc_video_time:
-                    srt_data = self.srt.next_data()
-                    srt_time = srt_data["startTime"]
-
             if osd_time < calc_video_time:
                 raw_osd_frame = self.osd.read_frame()
                 if not raw_osd_frame:
@@ -639,12 +634,19 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left,
                                    self.config.offset_top, self.config.osd_zoom)
+                osd_frame_no_srt = osd_frame
                 
             if self.srt and self.config.include_srt:
-                result = Utils.overlay_srt_line(self.config.fast_srt, frame, srt_data["line"], self.font.get_srt_font_size(
-                    ), (150 if self.font.is_hd() else 100))
+                if srt_time < calc_video_time:
+                    srt_data = self.srt.next_data()
+                    srt_time = srt_data["startTime"]
+
+                    frame_osd_srt = Utils.overlay_srt_line(self.config.fast_srt, osd_frame_no_srt, srt_data["line"], self.font.get_srt_font_size(
+                        ), (150 if self.font.is_hd() else 100))
+                    result = frame_osd_srt
             else:
-                result = frame
+                result = frame_osd_srt
+                
             # logging.debug(f"frame':{current_frame},'total':{total_frames},'srt':{srt_time},'osd':{osd_time},'video':{calc_video_time}")
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
             executor.submit(cv2.imwrite, out_path, result)
