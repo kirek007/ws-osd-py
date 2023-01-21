@@ -222,7 +222,7 @@ class VideoFile:
 
 
 class OsdGenConfig:
-    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt, hide_sensitive_osd, use_hw) -> None:
+    def __init__(self, video_path, osd_path, font_path, srt_path, output_path, offset_left, offset_top, osd_zoom, render_upscale, include_srt, hide_sensitive_osd, use_hw, fast_srt) -> None:
         self.video_path = video_path
         self.osd_path = osd_path
         self.font_path = font_path
@@ -235,6 +235,7 @@ class OsdGenConfig:
         self.include_srt = include_srt
         self.hide_sensitive_osd = hide_sensitive_osd
         self.use_hw = use_hw
+        self.fast_srt = fast_srt
 
 
 class OsdGenStatus:
@@ -313,7 +314,14 @@ class Utils:
         img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
 
     @staticmethod
-    def overlay_srt_line(img, line, font_size, left_offset):
+    def overlay_srt_line(fast, img, line, font_size, left_offset):
+        if fast:
+            return Utils.overlay_srt_line_fast(img, line, font_size, left_offset)
+        else:
+            return Utils.overlay_srt_line_slow(img, line, font_size, left_offset)
+
+    @staticmethod
+    def overlay_srt_line_slow(img, line, font_size, left_offset):
         pos_calc = (left_offset, img.shape[0] - 15)
         pil_im = Image.fromarray(img)
         draw = ImageDraw.Draw(pil_im, 'RGBA')
@@ -332,7 +340,7 @@ class Utils:
     def overlay_srt_line_fast(img, line, font_size, left_offset):
         left_offset = 200 if img.shape[1] > 1300 else 100 
         pos_calc = (left_offset, img.shape[0] - 30)
-        cv2.putText(img, line, pos_calc, cv2.FONT_HERSHEY_COMPLEX, 1/50 * font_size, (255, 255, 255, 255), 1)
+        cv2.putText(img, line, pos_calc, cv2.FONT_HERSHEY_COMPLEX, 1/40 * font_size, (255, 255, 255, 255), 1)
 
         return img
     @staticmethod
@@ -402,8 +410,8 @@ class OsdPreview:
                                 for im_list_h in osd_frame_glyphs])
         if self.srt and self.config.include_srt:
             srt_line = srt_data["line"]
-            video_frame = Utils.overlay_srt_line_fast(
-                video_frame, srt_line, self.font.get_srt_font_size(), (150 if self.font.is_hd() else 100))
+            video_frame = Utils.overlay_srt_line(
+                self.config.fast_srt, video_frame, srt_line, self.font.get_srt_font_size(), (150 if self.font.is_hd() else 100))
         Utils.overlay_image_alpha(
             video_frame, osd_frame, osd_pos[0], osd_pos[1], osd_zomm)
         result = cv2.resize(video_frame, (640, 360),
@@ -633,7 +641,7 @@ class OsdGenerator:
                                    self.config.offset_top, self.config.osd_zoom)
                 
             if self.srt and self.config.include_srt:
-                result = Utils.overlay_srt_line_fast(frame, srt_data["line"], self.font.get_srt_font_size(
+                result = Utils.overlay_srt_line(self.config.fast_srt, frame, srt_data["line"], self.font.get_srt_font_size(
                     ), (150 if self.font.is_hd() else 100))
             else:
                 result = frame
