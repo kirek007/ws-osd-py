@@ -680,7 +680,7 @@ class OsdGenerator:
                         ), (150 if self.font.is_hd() else 100))
                     result = frame_osd_srt
             else:
-                result = frame_osd_srt
+                result = osd_frame_no_srt
                 
             # logging.debug(f"frame':{current_frame},'total':{total_frames},'srt':{srt_time},'osd':{osd_time},'video':{calc_video_time}")
             out_path = os.path.join(self.output, "ws_%09d.png" % (current_frame))
