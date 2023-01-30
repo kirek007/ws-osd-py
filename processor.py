@@ -60,8 +60,11 @@ class OsdFont:
         pos_y = size_h * (index)
         pos_y2 = pos_y + size_h
         glyph = self.font[pos_y:pos_y2, 0:size_w]
-
-        return glyph
+        
+        if glyph.size > 0:
+            return glyph
+        else:
+            return None
 
     def is_hd(self):
         font_w = self.font.shape[1]
@@ -113,6 +116,17 @@ class OSDFile:
                 return "Unknown"
 
 
+@dataclass
+class MaskObject:
+    name: str
+    index: int
+    length: int
+    pos: int = -1
+
+    def __eq__(self, other: int):
+        return self.index == other
+
+
 class Frame:
     frame_w = 53
     frame_h = 20
@@ -122,47 +136,53 @@ class Frame:
         self.startTime = unpack("<L", raw_time)[0]
         self.rawData = data[4:]
         self.font = font
-
-        self.glyph_hide_start = [
-            3,  # gps
-            4,  # gps
-            16,  # home distance
-            345,  # alt symb
-
+        
+        self.inav_mask_list = [
+            MaskObject("lat", 3, 6),
+            MaskObject("lon", 4, 6),
+            MaskObject("home", 16, 3),
+            MaskObject("altitude", 118, -4),
         ]
-        self.glyph_hide_len = [
-            6,
-            6,
-            3,
-            3,
-        ]
-        self.mask_glyph_no = ord("*")
-        self.curent_mask_index = -1
-        self.curent_mask_counter = 0
-
+        
+        self.mask_glyph = self.font.get_glyph(ord("*"))
+        
     def __convert_to_glyphs(self, hide):
         glyphs_arr = []
+        glyph_no = []
+        to_mask = []
+           
         for x in range(0, len(self.rawData), 2):
             index, page = unpack("<BB", self.rawData[x:x + 2])
             glyph_index = index + page * 256
 
-            if hide and glyph_index in self.glyph_hide_start:
-                self.curent_mask_index = self.glyph_hide_start.index(
-                    glyph_index)
-
-            if hide and self.curent_mask_index > -1:
-                if self.curent_mask_counter < self.glyph_hide_len[self.curent_mask_index]:
-
-                    if self.curent_mask_counter > 0:
-                        glyph_index = self.mask_glyph_no
-                    self.curent_mask_counter += 1
-                else:
-                    self.curent_mask_counter = 0
-                    self.curent_mask_index = -1
-
             glyph = self.font.get_glyph(glyph_index)
-            glyphs_arr.append(glyph)
+            if glyph is not None:
+                glyph_no.append(glyph_index)
+                glyphs_arr.append(glyph)
+            else:
+                logging.info("Issue with OSD file, glyph index %s doesnt exist in given font! Replacing with empty char." % glyph_index)
+                glyph_no.append(glyph_index)
+                glyphs_arr.append(self.font.get_glyph(ord(" ")))
+                
+            if hide and glyph_index in self.inav_mask_list:  
+                
+                mask_me = self.inav_mask_list[self.inav_mask_list.index(glyph_index)]
+                mask_me.pos = len(glyphs_arr) - 1
+                to_mask.append(mask_me)
 
+        for item in to_mask:
+            if item.length > 0:
+                mask_from = item.pos + 1
+                mask_to = item.pos + item.length
+            else:
+                mask_from = item.pos + item.length
+                mask_to = item.pos - 1
+                
+            for mask_pos in range(mask_from, mask_to):
+                glyphs_arr[mask_pos] = self.mask_glyph
+        
+        # logging.debug("Frame data: %s" % glyph_no)
+        
         return glyphs_arr
 
     def get_osd_frame_glyphs(self, hide):
@@ -475,6 +495,7 @@ class OsdGenerator:
         self.osdGenStatus = OsdGenStatus()
         self.render_done = False
         self.use_hw = config.use_hw
+        self.use_x264 = True
         self.codecs = CodecsList(self.load_codecs())
 
         if config.srt_path:
@@ -493,16 +514,30 @@ class OsdGenerator:
         windows = "windows"
         linux = "linux"
         codecs = []
-        if self.use_hw:
-            codecs.append(CodecItem(name="hevc_videotoolbox", supported_os=[macos]))
-            codecs.append(CodecItem(name="hevc_nvenc", supported_os=[windows, linux]))
-            codecs.append(CodecItem(name="hevc_amf", supported_os=[windows]))
-            codecs.append(CodecItem(name="hevc_vaapi", supported_os=[linux]))
-            codecs.append(CodecItem(name="hevc_qsv", supported_os=[linux, windows]))
-            codecs.append(CodecItem(name="hevc_mf", supported_os=[windows]))
-            codecs.append(CodecItem(name="hevc_v4l2m2m", supported_os=[linux]))
+        
+        if self.use_x264:
+            if self.use_hw:
+                codecs.append(CodecItem(name="h264_videotoolbox", supported_os=[macos]))
+                codecs.append(CodecItem(name="h264_nvenc", supported_os=[windows, linux]))
+                codecs.append(CodecItem(name="h264_amf", supported_os=[windows]))
+                codecs.append(CodecItem(name="h264_vaapi", supported_os=[linux]))
+                codecs.append(CodecItem(name="h264_qsv", supported_os=[linux, windows]))
+                codecs.append(CodecItem(name="h264_mf", supported_os=[windows]))
+                codecs.append(CodecItem(name="h264_v4l2m2m", supported_os=[linux]))
 
-        codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
+            codecs.append(CodecItem(name="libx264", supported_os=[macos, windows, linux]))
+        else:
+            if self.use_hw:
+                codecs.append(CodecItem(name="hevc_videotoolbox", supported_os=[macos]))
+                codecs.append(CodecItem(name="hevc_nvenc", supported_os=[windows, linux]))
+                codecs.append(CodecItem(name="hevc_amf", supported_os=[windows]))
+                codecs.append(CodecItem(name="hevc_vaapi", supported_os=[linux]))
+                codecs.append(CodecItem(name="hevc_qsv", supported_os=[linux, windows]))
+                codecs.append(CodecItem(name="hevc_mf", supported_os=[windows]))
+                codecs.append(CodecItem(name="hevc_v4l2m2m", supported_os=[linux]))
+                codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
+                
+            codecs.append(CodecItem(name="libx265", supported_os=[macos, windows, linux]))
 
         return codecs
 
