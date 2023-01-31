@@ -288,7 +288,6 @@ class Utils:
         # Image ranges
         y1, y2 = max(0, y), min(img.shape[0], y + img_overlay_res.shape[0])
         x1, x2 = max(0, x), min(img.shape[1], x + img_overlay_res.shape[1])
-
         # Overlay ranges
         y1o, y2o = max(0, -y), min(img_overlay_res.shape[0], img.shape[0] - y)
         x1o, x2o = max(0, -x), min(img_overlay_res.shape[1], img.shape[1] - x)
@@ -669,7 +668,7 @@ class OsdGenerator:
                 osd_time = raw_osd_frame.startTime
                 Utils.merge_images(frame, osd_frame, self.config.offset_left,
                                    self.config.offset_top, self.config.osd_zoom)
-                osd_frame_no_srt = osd_frame
+                osd_frame_no_srt = frame
                 
             if self.srt and self.config.include_srt:
                 if srt_time < calc_video_time:
