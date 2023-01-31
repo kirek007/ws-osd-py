@@ -32,7 +32,7 @@ jobs:
         mkdir release
         cp resources/* release
         cp dist/ws_osd_gen.exe release
-        tar -a -c -f "release-${{ github.sha }}-windows.zip" release
+        tar -a -c -f "release-${{ github.ref_name }}-windows.zip" release
 
 
     - name: Release
@@ -43,7 +43,7 @@ jobs:
         draft: true
         fail_on_unmatched_files: true
         generate_release_notes: true
-        files: release-${{ github.sha }}-windows.zip
+        files: release-${{ github.ref_name }}-windows.zip
         append_body: true
         body: |
           This is a latest release from master branch.
