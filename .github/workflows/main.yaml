@@ -2,8 +2,8 @@ name: Package and Release Python Application
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
@@ -32,16 +32,23 @@ jobs:
         mkdir release
         cp resources/* release
         cp dist/ws_osd_gen.exe release
-        tar -a -c -f "pre-release-${{ github.sha }}-windows.zip" release
+        tar -a -c -f "release-${{ github.sha }}-windows.zip" release
 
 
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: master-${{ github.sha }}
-        name: Pre-release ${{ github.sha }}
-        prerelease: true
+        name: Release ${{ github.ref_name }}
+        prerelease: false
+        draft: true
         fail_on_unmatched_files: true
         generate_release_notes: true
-        files: pre-release-${{ github.sha }}-windows.zip
-        append_body: "This is latest build from master branch"
+        files: release-${{ github.sha }}-windows.zip
+        append_body: true
+        body: |
+          This is a latest release from master branch.
+          ---
+          ## Coffee needed
+          If you like tool, you can buy me a coffee so keep working more overnights :) 
+
+          <a href="https://www.buymeacoffee.com/kirek" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 30px !important;width: 108 !important;" ></a>
