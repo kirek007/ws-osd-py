@@ -37,6 +37,18 @@ cd ws-osd-py
 make run
 ```
 
+### Common issues for linux:
+If there is an issue with `ModuleNotFoundError: No module named 'attrdict'` try to install wxPython from wheel.
+
+Get packge link from here https://extras.wxpython.org/wxPython4/extras/linux/gtk3
+
+eg. for Ubuntu 20: `https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.0-cp310-cp310-linux_x86_64.whl`
+
+```bash
+source .venv/bin/activate
+pip install -f <link to package> wxPython
+```
+
 # Usage tutorial
 
 https://www.youtube.com/watch?v=we3F4rIXTqU
