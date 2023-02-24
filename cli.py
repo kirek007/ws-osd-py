@@ -3,6 +3,22 @@ from argparse import ArgumentParser
 
 from processor import OsdGenConfig, OsdGenerator
 
+
+def implicit_path(args, ext):
+    """
+    Attempts to find a path for the OSD and SRT files implicitly
+    file_path: path to the video (mp4) file
+    ext: file type suffix (e.g. osd or srt)
+    """
+    if ext not in {'osd', 'srt'}:
+        raise ValueError('Invalid file type, only srt or osd')
+    if getattr(args, f'{ext}_path') is None:
+        folder, _ = os.path.splitext(args.video_path)
+        return f"{folder}.{ext}"
+    else:
+        return args[f'{ext}_path']
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser()
@@ -37,21 +53,6 @@ if __name__ == '__main__':
                         help='')
 
     args = parser.parse_args()
-
-    def implicit_path(args, ext):
-        """
-        Attempts to find a path for the OSD and SRT files implicitly
-        file_path: path to the video (mp4) file
-        ext: file type suffix (e.g. osd or srt)
-        """
-        if ext not in {'osd', 'srt'}:
-            raise ValueError('Invalid file type, only srt or osd')
-        if getattr(args, f'{ext}_path') is None:
-            folder, _ = os.path.splitext(args.video_path)
-            return f"{folder}.{ext}"
-        else:
-            return args[f'{ext}_path']
-
 
     generator_config = OsdGenConfig(
         video_path=args.video_path,
