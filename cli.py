@@ -34,6 +34,9 @@ if __name__ == '__main__':
                         help='Path to font file - e.g (INAV_36.png)')
     parser.add_argument('--output-path', default=os.getcwd(),
                         help='Output path for PNG folder and finished video')
+    parser.add_argument('--no-video', default=False,
+                        help='Do not render video, only create the PNGs. '
+                             'Default Behavior is to render video')
     parser.add_argument('--offset-top', type=int, default=0,
                         help='Offset from top for OSD')
     parser.add_argument('--offset-left', help='Offset from left for OSD',
@@ -72,4 +75,5 @@ if __name__ == '__main__':
 
     gen = OsdGenerator(generator_config)
     gen.main()
-    gen.render()
+    if not args.no_video:
+        gen.render()
