@@ -1,4 +1,5 @@
 import os
+import secrets
 from argparse import ArgumentParser
 
 from processor import OsdGenConfig, OsdGenerator
@@ -19,6 +20,17 @@ def implicit_path(args, ext):
         return args[f'{ext}_path']
 
 
+
+def default_output_path(args):
+    """
+    Determines a default path for the output PNGs and files
+    """
+    random_hex = secrets.token_hex(3)
+    _, video_file = os.path.split(args.video_path)
+    file, ext = os.path.splitext(video_file)
+    return f"{os.getcwd()}/{file}-{random_hex}"
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser()
@@ -32,7 +44,7 @@ if __name__ == '__main__':
                                            ' directory as the video path')
     parser.add_argument('--font-path', required=True,
                         help='Path to font file - e.g (INAV_36.png)')
-    parser.add_argument('--output-path', default=os.getcwd(),
+    parser.add_argument('--output-path',
                         help='Output path for PNG folder and finished video')
     parser.add_argument('--no-video', default=False,
                         help='Do not render video, only create the PNGs. '
@@ -57,12 +69,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if not args.output_path:
+        output_path = default_output_path(args)
+    else:
+        output_path = args.output_path
+
     generator_config = OsdGenConfig(
         video_path=args.video_path,
         osd_path=implicit_path(args, 'osd'),
         srt_path=implicit_path(args, 'srt'),
         font_path=args.font_path,
-        output_path=args.output_path,
+        output_path=output_path,
         offset_top=args.offset_top,
         offset_left=args.offset_left,
         osd_zoom=args.osd_zoom,
