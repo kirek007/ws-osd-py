@@ -1,4 +1,5 @@
 import os
+import shutil
 import secrets
 from argparse import ArgumentParser
 
@@ -18,7 +19,6 @@ def implicit_path(args, ext):
         return f"{folder}.{ext}"
     else:
         return args[f'{ext}_path']
-
 
 
 def default_output_path(args):
@@ -46,6 +46,9 @@ if __name__ == '__main__':
                         help='Path to font file - e.g (INAV_36.png)')
     parser.add_argument('--output-path',
                         help='Output path for PNG folder and finished video')
+    parser.add_argument('--remove-png', default=False, action='store_true',
+                        help='Delete PNGs after rendering video. Option only '
+                             'works if rendering video')
     parser.add_argument('--no-video', default=False,
                         help='Do not render video, only create the PNGs. '
                              'Default Behavior is to render video')
@@ -93,4 +96,9 @@ if __name__ == '__main__':
     gen = OsdGenerator(generator_config)
     gen.main()
     if not args.no_video:
-        gen.render()
+        try:
+            gen.render()
+        finally:
+            # will always clean-up PNGs, if flag is specified
+            if args.remove_png:
+                shutil.rmtree(output_path)
