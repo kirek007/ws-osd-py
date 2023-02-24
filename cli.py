@@ -16,6 +16,8 @@ if __name__ == '__main__':
                                            ' directory as the video path')
     parser.add_argument('--font-path', required=True,
                         help='Path to font file - e.g (INAV_36.png)')
+    parser.add_argument('--output-path', default=os.getcwd(),
+                        help='Output path for PNG folder and finished video')
     parser.add_argument('--offset-top', type=int, default=0,
                         help='Offset from top for OSD')
     parser.add_argument('--offset-left', help='Offset from left for OSD',
@@ -56,7 +58,7 @@ if __name__ == '__main__':
         osd_path=implicit_path(args, 'osd'),
         srt_path=implicit_path(args, 'srt'),
         font_path=args.font_path,
-        output_path='/tmp/files_out3', # TODO make this video only and png automatic
+        output_path=args.output_path,
         offset_top=args.offset_top,
         offset_left=args.offset_left,
         osd_zoom=args.osd_zoom,
