@@ -33,7 +33,10 @@ def default_output_path(args):
 
 if __name__ == '__main__':
 
-    parser = ArgumentParser()
+    parser = ArgumentParser(
+        description="CLI tool for OSD generator",
+        epilog='Example: python .\cli.py --video-path "video.mp4" --font-path "sneaky_font.png"',
+    )
     parser.add_argument('--video-path', help='Path to the video file',
                         required=True)
     parser.add_argument('--osd-path', help='Path to the OSD file. If none '
@@ -65,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument('--hide-sensitive-osd', action='store_true',
                         help='Hide Sensitive Elements like lat, lon, altitude, '
                              'home', default=False)
-    parser.add_argument('--use-hw', action='store_true', default=False,
+    parser.add_argument('--use-hw', action='store_true', default=True,
                         help='Use Hardware Acceleration for Encoding')
     parser.add_argument('--fast-srt', action='store_true', default=False,
                         help='')
