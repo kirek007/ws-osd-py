@@ -37,6 +37,15 @@ cd ws-osd-py
 make run
 ```
 
+### CLI
+
+Thanks to @odgrace it's now possible to run tool without GUI (which is quite complicated sometimes).
+```bash
+pip install -r requirements-noui.txt
+python3 cli.py -h #It will list all required parameters
+```
+
+
 ### Common issues for linux:
 If there is an issue with `ModuleNotFoundError: No module named 'attrdict'` try to install wxPython from wheel.
 
