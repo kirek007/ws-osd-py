@@ -344,7 +344,11 @@ class Utils:
         pos_calc = (left_offset, img.shape[0] - 15)
         pil_im = Image.fromarray(img)
         draw = ImageDraw.Draw(pil_im, 'RGBA')
-        font = ImageFont.truetype("font.ttf", font_size)
+        try:
+            font = ImageFont.truetype("font.ttf", font_size)
+        except OSError:
+            folder, _ = os.path.split(__file__)
+            font = ImageFont.truetype(f"{folder}/resources/font.ttf")
 
         draw.text(pos_calc, line, font=font, fill=(
             255, 255, 255, 255), anchor="lb")
