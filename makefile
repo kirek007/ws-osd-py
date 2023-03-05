@@ -8,7 +8,7 @@ Makefile.venv:
 
 .PHONY: release
 release: venv
-	$(VENV)/pyinstaller --onefile .\osd_gui.py -n ws_osd_gen
+	$(VENV)/pyinstaller --onefile osd_gui.py -n ws_osd_gen
 
 .PHONY: run
 run: venv show-venv
