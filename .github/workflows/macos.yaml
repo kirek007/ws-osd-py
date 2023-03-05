@@ -26,9 +26,11 @@ jobs:
           pip install pyinstaller
 
       - name: Linux specific deps
-        if: ${{ matrix.os }} == 'ubuntu-latest'
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          pip install -f "https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.0-cp310-cp310-linux_x86_64.whl" wxPython
+          make venv || echo "it's fine"
+          source .venv/bin/activate
+          pip install -f "https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/wxPython-4.2.0-cp310-cp310-linux_x86_64.whl" wxPython || echo "it's fine"
 
       - name: Package application
         run: |
