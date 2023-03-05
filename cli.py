@@ -68,8 +68,10 @@ if __name__ == '__main__':
     parser.add_argument('--hide-sensitive-osd', action='store_true',
                         help='Hide Sensitive Elements like lat, lon, altitude, '
                              'home', default=False)
-    parser.add_argument('--use-hw', action='store_true', default=True,
-                        help='Use Hardware Acceleration for Encoding')
+    parser.add_argument('--no-hw-accel', action='store_true', default=False,
+                        help='Disable Hardware Acceleration of ffmpeg if flag '
+                             'specified. By default and without this flag, '
+                             'Hardware acceleration will be used')
     parser.add_argument('--fast-srt', action='store_true', default=False,
                         help='')
 
@@ -92,7 +94,7 @@ if __name__ == '__main__':
         render_upscale=args.render_upscale,
         include_srt=args.include_srt,
         hide_sensitive_osd=args.hide_sensitive_osd,
-        use_hw=args.use_hw,
+        use_hw=not args.no_hw_accel,
         fast_srt=args.fast_srt
     )
 
