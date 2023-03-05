@@ -4,7 +4,42 @@ on:
   workflow_dispatch: ~
 
 jobs:
-  build:
+  build-platforms:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Package application
+        run: |
+          make release
+
+      - name: Prepare files
+        run: |
+          mkdir release
+          cp resources/* release
+          cp dist/ws_osd_gen* release
+          tar -a -c -f "release-${{ github.ref_name }}-${{ matrix.os }}.zip" release
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ github.ref_name }}-${{ matrix.os }}
+          path: release-${{ github.ref_name }}-${{ matrix.os }}.zip
+  build-macos:
     runs-on: macos-12
 
     steps:
