@@ -23,14 +23,17 @@ jobs:
 
     - name: Package application
       run: |
+        make venv
+        source .venv/bin/activate
         py2applet --make-setup osd_gui.py
         python3 setup.py py2app
+
 
     - name: Prepare files
       run: |
         mkdir release
         cp resources/* release
-        cp dist/osd_gui.app release
+        cp -a dist/osd_gui.app release
         tar -a -c -f "release-${{ github.ref_name }}-macos-12.zip" release
 
 
