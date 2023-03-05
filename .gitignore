@@ -6,3 +6,4 @@ Makefile.venv
 .vscode/launch.json
 ffmpeg.exe
 !resources/ffmpeg.exe
+.idea

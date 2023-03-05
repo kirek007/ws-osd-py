@@ -1,0 +1,40 @@
+name: Macos release
+
+on:
+  workflow_dispatch: ~
+
+jobs:
+  build:
+    runs-on: macos-12
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip3 install -U py2app
+
+    - name: Package application
+      run: |
+        py2applet --make-setup osd_gui.py
+        python3 setup.py py2app
+
+    - name: Prepare files
+      run: |
+        mkdir release
+        cp resources/* release
+        cp dist/osd_gui.app release
+        tar -a -c -f "release-${{ github.ref_name }}-macos-12.zip" release
+
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: release-${{ github.ref_name }}-macos-12
+        path: release-${{ github.ref_name }}-macos-12.zip
