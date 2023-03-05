@@ -8,11 +8,10 @@ Makefile.venv:
 
 .PHONY: release
 release: venv
-    pip3 install pyinstaller
+	pip3 install pyinstaller
 	$(VENV)/pyinstaller --onefile osd_gui.py -n ws_osd_gen
 
 .PHONY: run
 run: venv show-venv
 	$(VENV)/python -c 'import sys; valid=(sys.version_info > (3,9) and sys.version_info < (3,11)); sys.exit(0) if valid else sys.exit(1)' || (echo "Python 3.10 is required"; exit 1)
 	$(VENV)/python osd_gui.py
-
