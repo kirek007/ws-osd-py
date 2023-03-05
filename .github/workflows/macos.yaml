@@ -34,6 +34,7 @@ jobs:
 
       - name: Package application
         run: |
+          pip3 install pyinstaller
           make release
 
       - name: Prepare files
