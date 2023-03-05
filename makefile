@@ -8,6 +8,7 @@ Makefile.venv:
 
 .PHONY: release
 release: venv
+    pip3 install pyinstaller
 	$(VENV)/pyinstaller --onefile osd_gui.py -n ws_osd_gen
 
 .PHONY: run
