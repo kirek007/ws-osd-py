@@ -165,7 +165,7 @@ if __name__ == '__main__':
     if not args.no_concat and len(video_outputs) > 1:
         Utils.concatenate_output_files(
             video_outputs,
-            args.output_path
+            args.output_file
         )
         for file in video_outputs:
             os.remove(file)
