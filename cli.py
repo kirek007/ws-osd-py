@@ -52,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--remove-png', default=False, action='store_true',
                         help='Delete PNGs after rendering video. Option only '
                              'works if rendering video')
-    parser.add_argument('--no-video', default=False,
+    parser.add_argument('--no-video', default=False, action='store_true',
                         help='Do not render video, only create the PNGs. '
                              'Default Behavior is to render video')
     parser.add_argument('--offset-top', type=int, default=0,
