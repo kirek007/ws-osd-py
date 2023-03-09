@@ -387,6 +387,30 @@ class Utils:
             raise RuntimeError("encoder error %d in tobytes" % s)
         return data
 
+    @staticmethod
+    def concatenate_output_files(output_files: list, final_path: str) -> None:
+        """
+        Concatenate FFMPEG files without re-encoding. Current implementation
+        requires a temporary file with paths listed, which is created. In the
+        future this would ideally just be a long ffmpeg string
+        """
+        cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'file_list.txt',
+               '-c', 'copy', final_path]
+        try:
+            os.remove('file_list.txt')
+        except OSError:
+            pass
+        try:
+            with open('file_list.txt', 'w') as fp:
+                for file in output_files:
+                    fp.write(f"file '{file}'\n")
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=False)
+        except subprocess.CalledProcessError as exc:
+            print(exc.output.decode())
+            print(exc.returncode)
+        finally:
+            os.remove('file_list.txt')
+
 
 class OsdPreview:
 
