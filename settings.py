@@ -32,22 +32,21 @@ class AppState:
     def getOptionsByPath(self, path: str):
         file_ext = pathlib.Path(path).suffix
 
-        match file_ext:
-            case ".osd"|".mp4"|".srt":
-                video = os.fspath(pathlib.Path(path).with_suffix('.mp4'))
-                srt = os.fspath(pathlib.Path(path).with_suffix('.srt'))
-                osd = os.fspath(pathlib.Path(path).with_suffix('.osd'))
-                if os.path.exists(video):
-                    self._video_path = video
-                if os.path.exists(srt):
-                    self._srt_path = srt
-                if os.path.exists(osd):
-                    self._osd_path = osd
-                self.update_output_path(path)
-            case ".png":
-                self._font_path = path
-            case _:
-                pass
+        if file_ext in {".osd", ".mp4", ".srt"}:
+            video = os.fspath(pathlib.Path(path).with_suffix('.mp4'))
+            srt = os.fspath(pathlib.Path(path).with_suffix('.srt'))
+            osd = os.fspath(pathlib.Path(path).with_suffix('.osd'))
+            if os.path.exists(video):
+                self._video_path = video
+            if os.path.exists(srt):
+                self._srt_path = srt
+            if os.path.exists(osd):
+                self._osd_path = osd
+            self.update_output_path(path)
+        elif file_ext == ".png":
+            self._font_path = path
+        else:
+            pass
 
     def update_output_path(self, path: str):
         self._output_path = os.path.join(
