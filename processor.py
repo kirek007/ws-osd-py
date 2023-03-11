@@ -105,15 +105,12 @@ class OSDFile:
         return Frame(rawData, self.font)
 
     def get_software_name(self):
-        match self.fcType:
-            case "BTFL":
-                return "Betaflight"
-            case "ARDU":
-                return "Ardupilot"
-            case "INAV":
-                return "INav"
-            case _:
-                return "Unknown"
+        mapping = {
+            'BTFL': 'Betaflight',
+            'ARDU': 'Ardupilot',
+            'INAV': 'INav',
+        }
+        return mapping.get(self.fcType, 'Unknown')
 
 
 @dataclass
