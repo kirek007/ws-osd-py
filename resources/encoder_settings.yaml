@@ -1,0 +1,19 @@
+h264_videotoolbox:
+  - key: 'q:v'
+    value: '65'
+
+h265_videotoolbox:
+  - key: 'q:v'
+    value: '65'
+
+libx264:
+  - key: 'crf'
+    value: '23'
+  - key: 'preset'
+    value: 'medium'
+
+libx265:
+  - key: 'crf'
+    value: '23'
+  - key: 'preset'
+    value: 'medium'
