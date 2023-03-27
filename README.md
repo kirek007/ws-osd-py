@@ -1,3 +1,10 @@
+# This repository is no longer maintained in favor or https://github.com/avsaase/walksnail-osd-tool
+
+Thanks for all your support <3 
+
+
+---
+
 ![image](https://user-images.githubusercontent.com/1878027/210377476-0ca2a14e-71d7-40d8-add5-3d5d6f00a006.png)
 
 # Tool for generating OSD for Walksnail DVR
