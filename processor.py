@@ -106,15 +106,12 @@ class OSDFile:
         return Frame(rawData, self.font)
 
     def get_software_name(self):
-        match self.fcType:
-            case "BTFL":
-                return "Betaflight"
-            case "ARDU":
-                return "Ardupilot"
-            case "INAV":
-                return "INav"
-            case _:
-                return "Unknown"
+        mapping = {
+            'BTFL': 'Betaflight',
+            'ARDU': 'Ardupilot',
+            'INAV': 'INav',
+        }
+        return mapping.get(self.fcType, 'Unknown')
 
 
 @dataclass
@@ -367,6 +364,7 @@ class Utils:
         cv2.putText(img, line, pos_calc, cv2.FONT_HERSHEY_COMPLEX, 1/40 * font_size, (255, 255, 255, 255), 1)
 
         return img
+       
     @staticmethod
     def to_numpy(im):
         im.load()
@@ -378,8 +376,7 @@ class Utils:
         shape, typestr = Image._conv_type_shape(im)
         data = np.empty(shape, dtype=np.dtype(typestr))
         mem = data.data.cast('B', (data.data.nbytes,))
-
-        bufsize, s, offset = 65536, 0, 0
+ 
         while not s:
             l, s, d = e.encode(bufsize)
             mem[offset:offset + len(d)] = d
@@ -388,7 +385,8 @@ class Utils:
             raise RuntimeError("encoder error %d in tobytes" % s)
         return data
 
-    @staticmethod
+    
+
     def load_encoder_defaults_yaml(encoder_name_string: str) -> dict:
         """
         Loads an encoder settings yaml with some 'nice' presets that should
@@ -419,6 +417,29 @@ class Utils:
                             f'{encoder_name_string}, using defaults')
             return default_encoder_settings
 
+    @staticmethod
+    def concatenate_output_files(output_files: list, final_path: str) -> None:
+        """
+        Concatenate FFMPEG files without re-encoding. Current implementation
+        requires a temporary file with paths listed, which is created. In the
+        future this would ideally just be a long ffmpeg string
+        """
+        cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'file_list.txt',
+               '-c', 'copy', final_path]
+        try:
+            os.remove('file_list.txt')
+        except OSError:
+            pass
+        try:
+            with open('file_list.txt', 'w') as fp:
+                for file in output_files:
+                    fp.write(f"file '{file}'\n")
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=False)
+        except subprocess.CalledProcessError as exc:
+            print(exc.output.decode())
+            print(exc.returncode)
+        finally:
+            os.remove('file_list.txt')
 
 class OsdPreview:
 
