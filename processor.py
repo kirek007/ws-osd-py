@@ -18,6 +18,7 @@ import numpy as np
 import ffmpeg
 import srt
 from PIL import ImageFont, ImageDraw, Image
+import yaml
 
 
 class CountsPerSec:
@@ -363,6 +364,7 @@ class Utils:
         cv2.putText(img, line, pos_calc, cv2.FONT_HERSHEY_COMPLEX, 1/40 * font_size, (255, 255, 255, 255), 1)
 
         return img
+       
     @staticmethod
     def to_numpy(im):
         im.load()
@@ -374,8 +376,7 @@ class Utils:
         shape, typestr = Image._conv_type_shape(im)
         data = np.empty(shape, dtype=np.dtype(typestr))
         mem = data.data.cast('B', (data.data.nbytes,))
-
-        bufsize, s, offset = 65536, 0, 0
+ 
         while not s:
             l, s, d = e.encode(bufsize)
             mem[offset:offset + len(d)] = d
@@ -383,6 +384,38 @@ class Utils:
         if s < 0:
             raise RuntimeError("encoder error %d in tobytes" % s)
         return data
+
+    
+
+    def load_encoder_defaults_yaml(encoder_name_string: str) -> dict:
+        """
+        Loads an encoder settings yaml with some 'nice' presets that should
+        work. Modifying encoder_settings.yaml allows tuning of ffmpeg parameters
+        for the output video.
+        :param: enco
+        """
+        default_encoder_settings = {
+            'crf': 0,
+            'b:v': '40M',
+            'preset': 'fast'
+        }
+        fname = 'encoder_settings.yaml'
+        if not os.path.isfile(fname):
+            folder, _ = os.path.split(__file__)
+            fname = f"{folder}/resources/encoder_settings.yaml"
+
+        try:
+            with open(fname, 'r') as fp:
+                settings = yaml.load(fp.read(), yaml.SafeLoader)
+        except FileNotFoundError:
+            logging.warning("No encoder_settings.yaml found, using defaults")
+            return default_encoder_settings
+        try:
+            return settings[encoder_name_string]
+        except KeyError:
+            logging.warning(f'No encoder settings found for '
+                            f'{encoder_name_string}, using defaults')
+            return default_encoder_settings
 
     @staticmethod
     def concatenate_output_files(output_files: list, final_path: str) -> None:
@@ -407,7 +440,6 @@ class Utils:
             print(exc.returncode)
         finally:
             os.remove('file_list.txt')
-
 
 class OsdPreview:
 
@@ -634,13 +666,13 @@ class OsdGenerator:
             .filter("scale", **ff_size, force_original_aspect_ratio=1, )
         )
         encoder_name = self.get_working_encoder()
+        encoder_settings = Utils.load_encoder_defaults_yaml(encoder_name)
         output_args = {
             "c:v": encoder_name,
-            "preset": "fast",
-            "crf": 0,
-            "b:v": "40M",
-            "acodec": "copy"
         }
+        for pair in encoder_settings:
+            output_args[pair['key']] = pair['value']
+        output_args['acodec'] = 'copy'
         self.render_done = False
         process = (
             video
